@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@android:drawable/ic_menu_view"
+        android:title="홈" />
+
+    <item
+        android:id="@+id/nav_board"
+        android:icon="@android:drawable/ic_dialog_email"
+        android:title="게시판" />
+
+    <item
+        android:id="@+id/nav_evidence"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="증거" />
+
+    <item
+        android:id="@+id/nav_mypage"
+        android:icon="@android:drawable/ic_menu_myplaces"
+        android:title="마이페이지" />
+
+</menu>

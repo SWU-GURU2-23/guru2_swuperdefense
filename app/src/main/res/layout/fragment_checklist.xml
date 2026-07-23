@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/app_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:paddingEnd="20dp"
+            android:text="←  뒤로"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="대응 체크리스트"
+            android:textColor="@color/text_primary"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvChecklistType"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_category_chip"
+            android:gravity="center"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:textColor="@color/orange_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvChecklistProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:text="0 / 5 완료"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/checklistProgressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginTop="12dp"
+            android:max="5"
+            android:progress="0"
+            android:progressBackgroundTint="@color/card_border"
+            android:progressTint="@color/orange_primary" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="30dp"
+            android:text="완료한 항목을 선택하세요"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkStep1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_guide_step"
+            android:minHeight="74dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:buttonTint="@color/orange_primary" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkStep2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_guide_step"
+            android:minHeight="74dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:buttonTint="@color/orange_primary" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkStep3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_guide_step"
+            android:minHeight="74dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:buttonTint="@color/orange_primary" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkStep4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_guide_step"
+            android:minHeight="74dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:buttonTint="@color/orange_primary" />
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/checkStep5"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_guide_step"
+            android:minHeight="74dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:buttonTint="@color/orange_primary" />
+
+        <TextView
+            android:id="@+id/btnResetChecklist"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:text="체크 초기화"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChecklistHome"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginBottom="24dp"
+            android:text="홈으로 돌아가기"
+            android:textColor="@color/background_black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/orange_primary"
+            app:cornerRadius="14dp" />
+
+    </LinearLayout>
+
+</ScrollView>

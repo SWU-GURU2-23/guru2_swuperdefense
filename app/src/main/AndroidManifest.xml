@@ -20,6 +20,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ==== 아래부터 추가: 로그인/회원가입/스플래시 화면 등록 (기존 런처는 MainActivity 그대로 유지) ==== -->
+        <!-- exported="true": Run Configuration에서 "Specified Activity"로 바로 테스트 실행하기 위함 (런처는 아님) -->
+        <activity android:name=".LoginActivity" android:exported="true" />
+        <activity android:name=".SignupActivity" android:exported="false" />
+        <activity android:name=".SplashActivity" android:exported="false" />
+        <!-- ==== 추가 끝 ==== -->
     </application>
 
 </manifest>

@@ -9,6 +9,10 @@
     <color name="text_primary">#FFFFFF</color>
     <color name="text_secondary">#A6A6A6</color>
 
+    <!-- 위험도 배지 색상 (스미싱 점검, 증거보관함 공용) -->
+    <color name="danger_red">#FF3B30</color>
+    <color name="safe_green">#34C759</color>
+
     <!-- 기존 이름: 다른 화면과의 호환을 위해 유지 -->
     <color name="background_black">#111111</color>
     <color name="surface_dark">#1C1C1E</color>

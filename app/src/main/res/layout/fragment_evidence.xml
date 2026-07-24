@@ -2,12 +2,10 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_background">
 
-    <!-- 화면 제목 -->
     <TextView
         android:id="@+id/tvTitle"
         android:layout_width="0dp"
@@ -15,7 +13,7 @@
         android:layout_marginStart="20dp"
         android:layout_marginTop="20dp"
         android:layout_marginEnd="20dp"
-        android:text="게시판"
+        android:text="증거 보관함"
         android:textColor="@color/text_primary"
         android:textSize="28sp"
         android:textStyle="bold"
@@ -23,79 +21,64 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 검색창과 필터 -->
-    <LinearLayout
-        android:id="@+id/searchRow"
+    <!-- 저장 용량 카드 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/storageCard"
         android:layout_width="0dp"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="18dp"
         android:layout_marginEnd="16dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        app:cardBackgroundColor="@color/card_charcoal"
+        app:cardCornerRadius="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle">
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginEnd="10dp"
-            android:layout_weight="1"
-            app:cardBackgroundColor="@color/card_charcoal"
-            app:cardCornerRadius="14dp"
-            app:strokeColor="@color/card_border"
-            app:strokeWidth="1dp">
-
-            <EditText
-                android:id="@+id/etSearch"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@null"
-                android:hint="검색어를 입력하세요."
-                android:paddingHorizontal="18dp"
-                android:singleLine="true"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary"
-                android:textSize="15sp" />
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            app:cardBackgroundColor="@color/card_charcoal"
-            app:cardCornerRadius="14dp"
-            app:strokeColor="@color/card_border"
-            app:strokeWidth="1dp">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
 
             <TextView
-                android:id="@+id/btnFilter"
+                android:id="@+id/tvStorageUsage"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="▽"
+                android:layout_height="wrap_content"
+                android:text="사용 중  1.2GB / 5GB"
                 android:textColor="@color/text_primary"
-                android:textSize="24sp" />
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-        </com.google.android.material.card.MaterialCardView>
+            <ProgressBar
+                android:id="@+id/progressStorage"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="12dp"
+                android:max="100"
+                android:progress="24"
+                android:progressTint="@color/orange_primary" />
 
-    </LinearLayout>
+        </LinearLayout>
 
-    <!-- 카테고리 -->
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 필터 칩 -->
     <HorizontalScrollView
         android:id="@+id/categoryScroll"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="16dp"
         android:clipToPadding="false"
-        android:fillViewport="false"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:scrollbars="none"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/searchRow">
+        app:layout_constraintTop_toBottomOf="@id/storageCard">
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -107,7 +90,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
                 android:layout_marginEnd="8dp"
-                android:text="전체"
+                android:text="전체 28"
                 android:textColor="@color/orange_primary"
                 app:backgroundTint="#24170D"
                 app:cornerRadius="22dp"
@@ -115,11 +98,11 @@
                 app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/chipPhishing"
+                android:id="@+id/chipImage"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
                 android:layout_marginEnd="8dp"
-                android:text="피싱/스미싱"
+                android:text="이미지 14"
                 android:textColor="@color/text_secondary"
                 app:backgroundTint="@android:color/transparent"
                 app:cornerRadius="22dp"
@@ -127,11 +110,11 @@
                 app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/chipAccount"
+                android:id="@+id/chipMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
                 android:layout_marginEnd="8dp"
-                android:text="계정 도용"
+                android:text="메모 6"
                 android:textColor="@color/text_secondary"
                 app:backgroundTint="@android:color/transparent"
                 app:cornerRadius="22dp"
@@ -139,36 +122,10 @@
                 app:strokeWidth="1dp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/chipMoney"
+                android:id="@+id/chipFile"
                 android:layout_width="wrap_content"
                 android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
-                android:text="금전 사기"
-                android:textColor="@color/text_secondary"
-                app:backgroundTint="@android:color/transparent"
-                app:cornerRadius="22dp"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp" />
-
-            <!-- ==== 수정 시작: 디자인 캡처(0723_141548365_06) 반영 - "보이스피싱" 카테고리 칩 추가 ==== -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/chipVoicePhishing"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
-                android:text="보이스피싱"
-                android:textColor="@color/text_secondary"
-                app:backgroundTint="@android:color/transparent"
-                app:cornerRadius="22dp"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp" />
-            <!-- ==== 수정 끝 ==== -->
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/chipEtc"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:text="기타"
+                android:text="파일 3"
                 android:textColor="@color/text_secondary"
                 app:backgroundTint="@android:color/transparent"
                 app:cornerRadius="22dp"
@@ -176,11 +133,12 @@
                 app:strokeWidth="1dp" />
 
         </LinearLayout>
+
     </HorizontalScrollView>
 
-    <!-- 게시글 목록 -->
+    <!-- 증거 목록 -->
     <ScrollView
-        android:id="@+id/postScroll"
+        android:id="@+id/evidenceScroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="14dp"
@@ -192,10 +150,9 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/categoryScroll">
-        <!-- ==== 수정: 원본 오타 버그 수정 (toTopOf → toBottomOf). 기존엔 이 ScrollView 높이가 0으로 접혀서 게시글이 하나도 안 보였음 ==== -->
 
         <LinearLayout
-            android:id="@+id/postContainer"
+            android:id="@+id/evidenceContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -203,14 +160,13 @@
 
     </ScrollView>
 
-    <!-- 검색/필터 결과가 없을 때 -->
     <TextView
         android:id="@+id/tvEmptyState"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:paddingTop="60dp"
-        android:text="조건에 맞는 게시글이 없습니다."
+        android:text="해당 유형의 증거가 없습니다."
         android:textColor="@color/text_secondary"
         android:textSize="14sp"
         android:visibility="gone"
@@ -218,9 +174,9 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/categoryScroll" />
 
-    <!-- 글쓰기 버튼 -->
+    <!-- 증거 추가 버튼 -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnWrite"
+        android:id="@+id/btnAdd"
         android:layout_width="58dp"
         android:layout_height="58dp"
         android:layout_marginEnd="20dp"
@@ -232,9 +188,5 @@
         app:cornerRadius="29dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-    <!-- ==== 수정: 원본 오타 버그 수정 (toTopOf → toBottomOf). 기존엔 버튼이 화면 위로 밀려나 안 보였음 ==== -->
-
-    <!-- 하단 메뉴 -->
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

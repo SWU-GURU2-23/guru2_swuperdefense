@@ -12,6 +12,12 @@ import com.google.android.material.button.MaterialButton
 
 class QuestionFragment : Fragment() {
 
+    private data class DiagnosisQuestion(
+        val text: String,
+        val yesRiskPoints: Int = 2,
+        val noRiskPoints: Int = 0
+    )
+
     private lateinit var incidentType: String
 
     private var currentQuestionIndex = 0
@@ -27,37 +33,37 @@ class QuestionFragment : Fragment() {
 
     private val questionMap = mapOf(
         "문자·메신저 피싱" to listOf(
-            "문자나 메시지에 포함된 링크를 눌렀나요?",
-            "개인정보나 인증번호를 입력했나요?",
-            "출처가 불분명한 앱을 설치했나요?"
+            DiagnosisQuestion("문자나 메시지에 포함된 링크를 눌렀나요?"),
+            DiagnosisQuestion("개인정보나 인증번호를 입력했나요?"),
+            DiagnosisQuestion("출처가 불분명한 앱을 설치했나요?")
         ),
 
         "보이스피싱·금전 피해" to listOf(
-            "상대방에게 돈을 송금했나요?",
-            "계좌번호나 인증번호를 알려줬나요?",
-            "현재도 상대방이 추가 송금을 요구하나요?"
+            DiagnosisQuestion("상대방에게 돈을 송금했나요?"),
+            DiagnosisQuestion("계좌번호나 인증번호를 알려줬나요?"),
+            DiagnosisQuestion("현재도 상대방이 추가 송금을 요구하나요?")
         ),
 
         "딥페이크·불법 촬영물" to listOf(
-            "본인의 사진이나 영상이 무단으로 사용됐나요?",
-            "해당 콘텐츠가 온라인에 게시되거나 공유됐나요?",
-            "상대방이 협박하거나 금전을 요구하나요?"
+            DiagnosisQuestion("본인의 사진이나 영상이 무단으로 사용됐나요?"),
+            DiagnosisQuestion("해당 콘텐츠가 온라인에 게시되거나 공유됐나요?"),
+            DiagnosisQuestion("상대방이 협박하거나 금전을 요구하나요?")
         ),
 
         "계정 해킹·도용" to listOf(
-            "본인이 시도하지 않은 로그인 기록이 있나요?",
-            "비밀번호나 복구 정보가 변경됐나요?",
-            "계정을 이용한 결제나 메시지 전송이 발생했나요?"
+            DiagnosisQuestion("본인이 시도하지 않은 로그인 기록이 있나요?"),
+            DiagnosisQuestion("비밀번호나 복구 정보가 변경됐나요?"),
+            DiagnosisQuestion("계정을 이용한 결제나 메시지 전송이 발생했나요?")
         ),
 
         "온라인 거래 사기" to listOf(
-            "상품이나 서비스를 받기 전에 돈을 보냈나요?",
-            "송금 후 상대방과 연락이 끊겼나요?",
-            "대화 내용과 이체 내역을 보관하고 있나요?"
+            DiagnosisQuestion("상품이나 서비스를 받기 전에 돈을 보냈나요?"),
+            DiagnosisQuestion("송금 후 상대방과 연락이 끊겼나요?"),
+            DiagnosisQuestion("대화 내용이나 이체 내역을 삭제했나요?")
         )
     )
 
-    private lateinit var questions: List<String>
+    private lateinit var questions: List<DiagnosisQuestion>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -82,10 +88,13 @@ class QuestionFragment : Fragment() {
 
         questions = questionMap[incidentType]
             ?: listOf(
-                "의심스러운 연락이나 메시지를 받았나요?",
-                "개인정보를 상대방에게 전달했나요?",
-                "금전적인 피해가 발생했나요?"
+                DiagnosisQuestion("의심스러운 연락이나 메시지를 받았나요?"),
+                DiagnosisQuestion("개인정보를 상대방에게 전달했나요?"),
+                DiagnosisQuestion("금전적인 피해가 발생했나요?")
             )
+
+        currentQuestionIndex = savedInstanceState?.getInt(STATE_QUESTION_INDEX) ?: 0
+        riskScore = savedInstanceState?.getInt(STATE_RISK_SCORE) ?: 0
 
         tvIncidentType = view.findViewById(R.id.tvIncidentType)
         tvQuestionCount = view.findViewById(R.id.tvQuestionCount)
@@ -117,13 +126,17 @@ class QuestionFragment : Fragment() {
         tvQuestionCount.text =
             "질문 ${currentQuestionIndex + 1} / ${questions.size}"
 
-        tvQuestion.text = questions[currentQuestionIndex]
+        tvQuestion.text = questions[currentQuestionIndex].text
+        tvDescription.text = "실제로 겪은 상황을 기준으로 선택해주세요."
         progressBar.progress = currentQuestionIndex + 1
     }
 
     private fun moveToNextQuestion(answeredYes: Boolean) {
-        if (answeredYes) {
-            riskScore += 2
+        val currentQuestion = questions[currentQuestionIndex]
+        riskScore += if (answeredYes) {
+            currentQuestion.yesRiskPoints
+        } else {
+            currentQuestion.noRiskPoints
         }
 
         currentQuestionIndex++
@@ -149,8 +162,16 @@ class QuestionFragment : Fragment() {
             .commit()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putInt(STATE_QUESTION_INDEX, currentQuestionIndex)
+        outState.putInt(STATE_RISK_SCORE, riskScore)
+        super.onSaveInstanceState(outState)
+    }
+
     companion object {
         private const val ARG_INCIDENT_TYPE = "incident_type"
+        private const val STATE_QUESTION_INDEX = "question_index"
+        private const val STATE_RISK_SCORE = "risk_score"
 
         fun newInstance(
             incidentType: String

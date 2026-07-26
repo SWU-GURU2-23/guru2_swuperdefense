@@ -78,6 +78,8 @@ class EvidenceFragment : Fragment() {
 
         fun getEvidenceById(id: Int): Evidence? = evidenceList.find { it.id == id }
 
+        fun evidenceCount(): Int = evidenceList.size
+
         /** EvidenceDetailFragment의 삭제 버튼에서 호출 */
         fun removeEvidence(id: Int) {
             evidenceList.removeAll { it.id == id }

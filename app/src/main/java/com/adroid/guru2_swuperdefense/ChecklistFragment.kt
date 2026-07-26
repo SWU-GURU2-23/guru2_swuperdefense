@@ -1,6 +1,5 @@
 package com.adroid.guru2_swuperdefense
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -101,26 +100,24 @@ class ChecklistFragment : Fragment() {
         val checklist = checklistMap[incidentType]
             ?: defaultChecklist()
 
-        val preferences = requireContext().getSharedPreferences(
-            PREF_NAME,
-            Context.MODE_PRIVATE
-        )
+        ChecklistProgressStore.setActiveIncident(requireContext(), incidentType)
 
         checkBoxes.forEachIndexed { index, checkBox ->
             checkBox.text = checklist[index]
 
-            checkBox.isChecked = preferences.getBoolean(
-                makePreferenceKey(index),
-                false
+            checkBox.isChecked = ChecklistProgressStore.isChecked(
+                requireContext(),
+                incidentType,
+                index
             )
 
             checkBox.setOnCheckedChangeListener { _, isChecked ->
-                preferences.edit()
-                    .putBoolean(
-                        makePreferenceKey(index),
-                        isChecked
-                    )
-                    .apply()
+                ChecklistProgressStore.setChecked(
+                    requireContext(),
+                    incidentType,
+                    index,
+                    isChecked
+                )
 
                 updateProgress()
 
@@ -167,17 +164,9 @@ class ChecklistFragment : Fragment() {
     }
 
     private fun resetChecklist() {
-        val preferences = requireContext().getSharedPreferences(
-            PREF_NAME,
-            Context.MODE_PRIVATE
-        )
-
-        checkBoxes.forEachIndexed { index, checkBox ->
+        ChecklistProgressStore.reset(requireContext(), incidentType)
+        checkBoxes.forEach { checkBox ->
             checkBox.isChecked = false
-
-            preferences.edit()
-                .remove(makePreferenceKey(index))
-                .apply()
         }
 
         updateProgress()
@@ -187,10 +176,6 @@ class ChecklistFragment : Fragment() {
             "체크리스트를 초기화했습니다.",
             Toast.LENGTH_SHORT
         ).show()
-    }
-
-    private fun makePreferenceKey(index: Int): String {
-        return "${incidentType}_step_$index"
     }
 
     private fun defaultChecklist(): List<String> {
@@ -205,8 +190,6 @@ class ChecklistFragment : Fragment() {
 
     companion object {
         private const val ARG_INCIDENT_TYPE = "incident_type"
-        private const val PREF_NAME = "checklist_preferences"
-
         fun newInstance(
             incidentType: String
         ): ChecklistFragment {

@@ -4,7 +4,9 @@
 다른 AI 모델이나 팀원이 코드를 처음 볼 때 빠르게 전체 그림을 파악할 수 있도록 작성했습니다.
 
 패키지: `com.adroid.guru2_swuperdefense`
-DB/백엔드는 아직 연동 전이며, 모든 데이터는 **앱이 켜져 있는 동안만 유지되는 메모리 저장소**(Kotlin `object`의 `companion object` 또는 최상위 `object`)에 있습니다. 백엔드 담당자가 채워야 할 자리는 전부 `// TODO: 백엔드 연동 지점` 주석으로 표시되어 있습니다.
+DB/백엔드는 아직 연동 전입니다. 게시판·증거·스미싱 이력·최근 활동은 앱 프로세스가
+살아 있는 동안만 유지되는 메모리 저장소에 있고, 로그인 세션·피해 진단 요약·체크리스트는
+`SharedPreferences`에 임시 저장됩니다. 실제 DB 작업 순서는 `DB_ROADMAP.md`에 정리했습니다.
 
 ---
 
@@ -51,6 +53,10 @@ BoardFragment ──(글 클릭)──▶ PostDetailFragment
 
 **본인 글 판별**: `Post.isMine` 필드. 지금은 로그인 연동 전이라 "이 앱에서 직접 작성한 글"만 `true`. 실제로는 `currentUserId == post.authorId` 비교로 교체해야 함 (TODO 표시됨).
 
+게시글을 열면 해당 게시글의 `isNew`가 `false`로 바뀝니다. 공감과 스크랩 상태는 같은 앱
+프로세스 안에서는 다시 상세 화면을 열어도 유지되지만, 사용자별 DB 연동 전까지는 앱을
+완전히 종료하면 초기화됩니다.
+
 ---
 
 ### 📁 증거 보관함 (Evidence)
@@ -61,7 +67,7 @@ BoardFragment ──(글 클릭)──▶ PostDetailFragment
 | `AddEvidenceFragment.kt` | 증거 추가. "글로 작성"(메모) / "파일 첨부"(이미지·음성, **여러 개 동시 선택 가능**) 두 모드 |
 | `EvidenceDetailFragment.kt` | 상세보기. 타입별로 다른 콘텐츠 표시(메모 전문 / 이미지 미리보기 / 음성 재생), 삭제 |
 
-**여러 장/여러 파일 선택 처리**: `AddEvidenceFragment`에서 이미지·음성 각각 여러 개를 고르면, **선택한 개수만큼 각각 별도의 Evidence 항목**으로 저장됩니다 (제목에 "(1)", "(2)"... 자동 부여).
+**여러 장/여러 파일 선택 처리**: `AddEvidenceFragment`에서 이미지·음성 각각 여러 개를 고르면, **선택한 개수만큼 각각 별도의 Evidence 항목**으로 저장됩니다 (제목에 "(1)", "(2)"... 자동 부여). `OpenMultipleDocuments`를 사용해 가능한 경우 URI 읽기 권한도 유지합니다.
 
 **화면 흐름**
 ```
@@ -94,6 +100,10 @@ EvidenceFragment ──(항목 클릭)──▶ EvidenceDetailFragment ──(�
 | `ChangePasswordFragment.kt` | 현재/새/새 비밀번호 확인 3단계 폼 |
 
 로그인 시 저장된 아이디는 `SharedPreferences("login")`에서 읽어옵니다 (Login/Signup 화면이 쓰는 것과 같은 저장소).
+
+앱 시작점은 `SplashActivity`입니다. 로컬 세션이 있으면 `MainActivity`, 없으면
+`LoginActivity`로 이동합니다. 현재 로그인은 화면 흐름 확인을 위한 임시 통과 방식이며,
+비밀번호는 저장하지 않습니다.
 
 ---
 
@@ -130,8 +140,13 @@ Type.NONE           → 이동 없이 "샘플 데이터입니다" 토스트만 (
 | 스미싱 검사 이력 | `SmishingAnalyzer` object | `checkHistory: MutableList<CheckRecord>` |
 | 최근 활동 로그 | `ActivityLog` object | `entries: MutableList<Entry>` |
 | 로그인 아이디(저장 체크 시) | `SharedPreferences("login")` | 비밀번호는 저장 안 함 |
+| 로그인 세션 | `AppSession` → `SharedPreferences("login")` | 인증 연동 전 임시 상태 |
+| 마지막 피해 진단 | `DiagnosisSummaryStore` | 홈 요약용 임시 상태 |
+| 체크리스트 진행률 | `ChecklistProgressStore` | 사고 유형·단계별 Boolean |
 
-전부 **앱을 완전히 종료하면 초기화**됩니다 (DB 아님). 백엔드 담당자가 각 저장소를 Room DB 등으로 교체하면 되고, 위 표의 "데이터"를 조회/저장하는 함수(`addPost`, `addEvidence`, `saveCheck`, `log` 등) 내부만 바꾸면 되도록 이미 접근 지점이 함수로 캡슐화되어 있습니다.
+메모리 저장 항목은 **앱 프로세스를 완전히 종료하면 초기화**됩니다. SharedPreferences 항목은
+앱 재실행 후에도 남지만 정식 DB는 아닙니다. 백엔드 담당자가 각 저장소를 Room DB 등으로
+교체할 수 있도록 주요 조회·저장 함수가 분리되어 있습니다.
 
 ---
 
@@ -144,10 +159,10 @@ Type.NONE           → 이동 없이 "샘플 데이터입니다" 토스트만 (
 | `BoardFragment.kt` | 게시글 CRUD를 DB로, 본인 글 판별을 실제 로그인 사용자 기준으로 |
 | `WritePostFragment.kt` | 글쓰기/수정 DB 반영 |
 | `PostDetailFragment.kt` | 댓글 DB 저장, 공감/스크랩 상태 영구 저장 |
-| `EvidenceFragment.kt` / `AddEvidenceFragment.kt` | 증거 DB 저장. 첨부파일은 URI만 저장 중이라 **앱 재실행 시 접근 권한이 사라질 수 있음** — 내부 저장소로 파일 복사 또는 `OpenDocument()` + `takePersistableUriPermission()` 필요 |
+| `EvidenceFragment.kt` / `AddEvidenceFragment.kt` | 증거 DB 저장. 현재 URI 권한 요청은 UI 초안이며, 확정 정책에 따라 원본을 앱 전용 내부 저장소로 복사해야 함 |
 | `EvidenceDetailFragment.kt` | 삭제를 DB 반영으로 |
 | `SmishingAnalyzer.kt` | 판별 로직을 서버 API/공공데이터(KISA 스미싱 URL 목록 등)로 고도화, 검사 이력 DB 저장 |
-| `SmishingResultFragment.kt` | 발신번호 실제 차단 처리 |
+| `SmishingResultFragment.kt` | 검사 결과에서 대응 가이드로 연결. 실제 전화번호 차단은 팀 합의로 범위에서 제외 |
 | `AccountFragment.kt` / `MyPageFragment.kt` | 실제 로그인 세션 아이디 조회, 회원탈퇴 DB 반영, 로그아웃 세션 종료 |
 | `ChangePasswordFragment.kt` | 현재 비밀번호 검증 + 새 비밀번호 DB 반영 |
 | `ActivityLog.kt` | 활동 로그 DB 저장 (`ActivityLogDao`) |

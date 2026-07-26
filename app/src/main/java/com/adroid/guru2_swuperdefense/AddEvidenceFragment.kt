@@ -1,5 +1,6 @@
 package com.adroid.guru2_swuperdefense
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -20,15 +21,14 @@ import java.util.Locale
 /**
  * 증거 추가 화면. [Mode]에 따라 입력 UI가 바뀌는 하나의 화면.
  * - [Mode.TEXT] (글로 작성): 제목 + 내용 텍스트를 "메모" 타입 증거 1건으로 저장
- * - [Mode.FILE] (파일 첨부): 이미지/음성 파일을 [ActivityResultContracts.GetMultipleContents]로
+ * - [Mode.FILE] (파일 첨부): 이미지/음성 파일을 [ActivityResultContracts.OpenMultipleDocuments]로
  *   여러 개 동시 선택 가능. 선택한 개수만큼 [EvidenceFragment.addEvidence]를 반복 호출해서
  *   **각각 별도의 증거 항목**으로 저장한다 (제목이 2개 이상이면 "제목 (1)", "제목 (2)"... 자동 부여).
  *
  * 저장 완료 시 [MainActivity.navigateToTab]으로 증거보관함 탭으로 이동해서 바로 확인 가능.
  *
- * 주의: [pickedImageUris]/[pickedAudioUris]는 `GetMultipleContents()`가 부여한 임시 읽기 권한이라
- * 앱 프로세스가 살아있는 동안만 유효하다 (재부팅/재설치 후 접근 불가할 수 있음). 실제 서비스에서는
- * 파일을 앱 내부 저장소로 복사하거나 `OpenDocument()` + `takePersistableUriPermission()`으로 교체 필요.
+ * 선택한 URI에는 가능한 경우 영구 읽기 권한을 요청한다. 현재는 UI 초안 단계이며,
+ * DB 연동 시 증거 원본은 팀에서 확정한 정책에 따라 앱 전용 내부 저장소로 복사해야 한다.
  */
 class AddEvidenceFragment : Fragment() {
 
@@ -44,9 +44,10 @@ class AddEvidenceFragment : Fragment() {
     private lateinit var modeChips: List<MaterialButton>
 
     // 액티비티 결과 런처는 Fragment가 STARTED 상태가 되기 전에 등록되어야 하므로 프로퍼티로 선언
-    // 이미지/음성 파일 모두 여러 개를 한 번에 선택할 수 있도록 GetMultipleContents 사용
-    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    // 이미지/음성 파일 모두 여러 개를 한 번에 선택하고 URI 읽기 권한을 유지
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
+            persistReadPermissions(uris)
             pickedImageUris = uris
             pickedAudioUris = emptyList()
             tvSelectedFile.text = if (uris.size == 1) {
@@ -57,8 +58,9 @@ class AddEvidenceFragment : Fragment() {
         }
     }
 
-    private val pickAudioLauncher = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    private val pickAudioLauncher = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
+            persistReadPermissions(uris)
             pickedAudioUris = uris
             pickedImageUris = emptyList()
             tvSelectedFile.text = if (uris.size == 1) {
@@ -109,10 +111,10 @@ class AddEvidenceFragment : Fragment() {
 
         tvSelectedFile = view.findViewById(R.id.tvSelectedFile)
         view.findViewById<View>(R.id.btnPickImage).setOnClickListener {
-            pickImageLauncher.launch("image/*")
+            pickImageLauncher.launch(arrayOf("image/*"))
         }
         view.findViewById<View>(R.id.btnPickAudio).setOnClickListener {
-            pickAudioLauncher.launch("audio/*")
+            pickAudioLauncher.launch(arrayOf("audio/*"))
         }
 
         val chipDanger = view.findViewById<MaterialButton>(R.id.chipDanger)
@@ -142,9 +144,8 @@ class AddEvidenceFragment : Fragment() {
             }
 
             // TODO: 백엔드 연동 지점 - EvidenceDao.insertEvidence()로 교체.
-            // TODO: 파일 URI 권한은 GetContent()/GetMultipleContents() 특성상 앱 재실행 시 유지되지 않음.
-            //       실제 서비스에서는 OpenDocument() + takePersistableUriPermission()으로 교체하거나
-            //       파일을 앱 내부 저장소로 복사해서 보관해야 함.
+            // TODO: DB 연동 시 파일을 앱 전용 내부 저장소로 복사하고,
+            //       복사된 파일 URI와 메타데이터를 EvidenceEntity에 저장해야 함.
             when (mode) {
                 Mode.TEXT -> {
                     val content = etContent.text.toString()
@@ -222,6 +223,17 @@ class AddEvidenceFragment : Fragment() {
             }
         }
         return name ?: uri.lastPathSegment ?: "알 수 없는 파일"
+    }
+
+    private fun persistReadPermissions(uris: List<Uri>) {
+        uris.forEach { uri ->
+            runCatching {
+                requireContext().contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+        }
     }
 
     private fun updateModeChipStyles(selected: MaterialButton) {

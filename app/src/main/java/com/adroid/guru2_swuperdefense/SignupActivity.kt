@@ -1,5 +1,6 @@
 package com.adroid.guru2_swuperdefense
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.TextView
@@ -21,13 +22,19 @@ class SignupActivity : AppCompatActivity() {
         tvBack.setOnClickListener { finish() }
 
         btnSignup.setOnClickListener {
-            val id = etId.text.toString()
+            val id = etId.text.toString().trim()
             val password = etPassword.text.toString()
             val confirm = etPasswordConfirm.text.toString()
 
             val errorMessage = when {
                 id.isBlank() || password.isBlank() || confirm.isBlank() ->
                     "모든 항목을 입력해주세요."
+                !ID_PATTERN.matches(id) ->
+                    "아이디는 영문, 숫자, 밑줄을 사용해 4~20자로 입력해주세요."
+                password.length < 8 ||
+                    password.none(Char::isLetter) ||
+                    password.none(Char::isDigit) ->
+                    "비밀번호는 영문과 숫자를 포함해 8자 이상이어야 합니다."
                 password != confirm ->
                     "비밀번호가 일치하지 않습니다."
                 else -> null
@@ -39,8 +46,8 @@ class SignupActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // TODO: DB 연동 지점 (백엔드 담당자 작업 영역)
-            // val isSuccess = UserDao(this).registerUser(id, password)
+            // TODO: 인증 연동 지점
+            // val isSuccess = authRepository.signUp(id, password)
             // if (!isSuccess) {
             //     tvError.text = "이미 사용 중인 아이디입니다."
             //     tvError.visibility = TextView.VISIBLE
@@ -48,7 +55,16 @@ class SignupActivity : AppCompatActivity() {
             // }
 
             tvError.visibility = TextView.GONE
+            setResult(
+                RESULT_OK,
+                Intent().putExtra(EXTRA_REGISTERED_ID, id)
+            )
             finish()
         }
+    }
+
+    companion object {
+        const val EXTRA_REGISTERED_ID = "registered_id"
+        private val ID_PATTERN = Regex("^[A-Za-z0-9_]{4,20}$")
     }
 }

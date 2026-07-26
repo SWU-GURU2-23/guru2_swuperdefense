@@ -12,6 +12,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
 /**
@@ -91,9 +92,23 @@ class SmishingResultFragment : Fragment() {
             Toast.makeText(requireContext(), "복사했습니다.", Toast.LENGTH_SHORT).show()
         }
 
-        view.findViewById<View>(R.id.btnBlockNow).setOnClickListener {
-            // TODO: 백엔드 연동 지점 - 실제 발신번호 차단 목록에 등록하는 로직
-            Toast.makeText(requireContext(), "발신 번호를 차단 목록에 등록했습니다.", Toast.LENGTH_SHORT).show()
+        view.findViewById<MaterialButton>(R.id.btnOpenResponseGuide).setOnClickListener {
+            val diagnosisScore = when {
+                result.score >= 70 -> 6
+                result.score >= 40 -> 4
+                else -> 0
+            }
+            parentFragmentManager
+                .beginTransaction()
+                .replace(
+                    R.id.fragmentContainer,
+                    GuideFragment.newInstance(
+                        incidentType = "문자·메신저 피싱",
+                        riskScore = diagnosisScore
+                    )
+                )
+                .addToBackStack(null)
+                .commit()
         }
 
         view.findViewById<View>(R.id.btnReanalyze).setOnClickListener {
@@ -103,9 +118,9 @@ class SmishingResultFragment : Fragment() {
 
     private fun buildRiskFactorCard(no: Int, factor: SmishingAnalyzer.RiskFactor): MaterialCardView {
         val context = requireContext()
-        val (badgeColor) = when (factor.level) {
-            "높음" -> arrayOf(R.color.danger_red)
-            else -> arrayOf(R.color.orange_primary)
+        val badgeColor = when (factor.level) {
+            "높음" -> R.color.danger_red
+            else -> R.color.orange_primary
         }
 
         val card = MaterialCardView(context).apply {
@@ -163,7 +178,7 @@ class SmishingResultFragment : Fragment() {
 
         val levelText = TextView(context).apply {
             text = "위험도\n${factor.level}"
-            setTextColor(colorOf(badgeColor as Int))
+            setTextColor(colorOf(badgeColor))
             textSize = 12f
             gravity = android.view.Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(dp(60), LinearLayout.LayoutParams.WRAP_CONTENT)

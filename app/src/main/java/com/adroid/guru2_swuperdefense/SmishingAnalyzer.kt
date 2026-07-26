@@ -18,20 +18,25 @@ object SmishingAnalyzer {
         val riskFactors: List<RiskFactor>
     )
 
-    private val urlPattern = Regex("(https?://|www\\.|[a-zA-Z0-9-]+\\.(com|kr|net)(/|\\s|$))")
+    private val urlPattern = Regex(
+        "(https?://|www\\.|[a-zA-Z0-9-]+\\.(com|kr|net|org|io|me|ly)(/|\\s|$))",
+        RegexOption.IGNORE_CASE
+    )
     private val urgencyKeywords = listOf("긴급", "즉시", "오늘까지", "정지", "마지막", "지금 바로", "당장")
     private val moneyKeywords = listOf("입금", "계좌", "결제", "환불", "당첨", "수수료", "인증번호", "개인정보")
+    private val appInstallKeywords = listOf("앱 설치", "어플 설치", "apk", "보안 앱", "원격제어")
+    private val institutionKeywords = listOf("경찰", "검찰", "금융감독원", "은행", "카드사", "택배", "국세청", "정부")
     private val officialPrefixes = listOf("1588", "1544", "1600", "112", "118")
 
     /**
-     * 문구/발신번호를 규칙 기반으로 채점한다. 기본 점수 20에서 시작해서
+     * 문구/발신번호를 규칙 기반으로 채점한다. 기본 점수 10에서 시작해서
      * 위험 요소가 발견될 때마다 가중치를 더하고, 최종 점수는 [riskLevelLabel]로 등급화한다.
      * 같은 입력이면 항상 같은 결과를 내는 순수 함수라서, [SmishingResultFragment]가
      * [CheckRecord](message, sender)만 저장해두고 화면을 그릴 때마다 다시 호출해도 결과가 동일하다.
      */
     fun analyze(message: String, sender: String): AnalysisResult {
         val riskFactors = mutableListOf<RiskFactor>()
-        var score = 20
+        var score = 10
 
         if (urlPattern.containsMatchIn(message)) {
             riskFactors += RiskFactor(
@@ -39,16 +44,22 @@ object SmishingAnalyzer {
                 "메시지 내 링크가 악성 사이트로 연결될 가능성이 높습니다.",
                 "높음"
             )
-            score += 30
+            score += 40
         }
 
-        if (sender.isNotBlank() && officialPrefixes.none { sender.startsWith(it) }) {
+        val normalizedSender = sender.filter(Char::isDigit)
+        val claimsToBeInstitution = institutionKeywords.any(message::contains)
+        if (
+            normalizedSender.isNotBlank() &&
+            claimsToBeInstitution &&
+            officialPrefixes.none(normalizedSender::startsWith)
+        ) {
             riskFactors += RiskFactor(
                 "발신자 정보 불일치",
-                "발신 번호가 공식 기관과 일치하지 않습니다.",
-                "높음"
+                "공공기관·금융기관을 언급하지만 대표번호 형태와 일치하지 않습니다.",
+                "중간"
             )
-            score += 25
+            score += 20
         }
 
         if (urgencyKeywords.any { message.contains(it) }) {
@@ -66,7 +77,16 @@ object SmishingAnalyzer {
                 "금전 또는 개인정보 입력을 유도하는 표현이 포함되어 있습니다.",
                 "중간"
             )
-            score += 15
+            score += 20
+        }
+
+        if (appInstallKeywords.any { message.contains(it, ignoreCase = true) }) {
+            riskFactors += RiskFactor(
+                "앱 설치 유도",
+                "출처가 불분명한 앱이나 원격제어 프로그램 설치를 유도합니다.",
+                "높음"
+            )
+            score += 25
         }
 
         return AnalysisResult(score.coerceAtMost(100), riskFactors)
@@ -98,4 +118,6 @@ object SmishingAnalyzer {
     }
 
     fun getCheckById(id: Int): CheckRecord? = checkHistory.find { it.id == id }
+
+    fun latestCheck(): CheckRecord? = checkHistory.firstOrNull()
 }

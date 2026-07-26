@@ -58,13 +58,16 @@ class ChangePasswordFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // TODO: 백엔드 연동 지점 (백엔드 담당자 작업 영역)
-            // val isValid = UserDao(requireContext()).checkLogin(currentId, current)
+            // TODO: 백엔드 연동 지점
+            // val isValid = authRepository.verifyCurrentPassword(current)
             // if (!isValid) { tvError.text = "현재 비밀번호가 올바르지 않습니다."; ...; return@setOnClickListener }
-            // UserDao(requireContext()).updatePassword(currentId, new)
+            // authRepository.updatePassword(new)
 
-            Toast.makeText(requireContext(), "비밀번호가 변경되었습니다.", Toast.LENGTH_SHORT).show()
-            parentFragmentManager.popBackStack()
+            Toast.makeText(
+                requireContext(),
+                "입력 형식을 확인했습니다. 실제 변경은 인증 서버 연결 후 가능합니다.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }

@@ -28,8 +28,6 @@ import com.google.android.material.button.MaterialButton
 class PostDetailFragment : Fragment() {
 
     private var postId: Int = -1
-    private var hasLiked = false
-    private var hasScrapped = false
 
     private lateinit var commentContainer: LinearLayout
     private lateinit var tvCommentHeader: TextView
@@ -56,6 +54,7 @@ class PostDetailFragment : Fragment() {
             parentFragmentManager.popBackStack()
             return
         }
+        post.isNew = false
 
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
             parentFragmentManager.popBackStack()
@@ -119,14 +118,14 @@ class PostDetailFragment : Fragment() {
 
         fun refreshLikeButton() {
             btnLike.text = "👍 공감 ${post.likeCount}"
-            val color = colorOf(if (hasLiked) R.color.orange_primary else R.color.text_secondary)
+            val color = colorOf(if (post.hasLiked) R.color.orange_primary else R.color.text_secondary)
             btnLike.setTextColor(color)
             btnLike.strokeColor = android.content.res.ColorStateList.valueOf(color)
         }
 
         fun refreshScrapButton() {
-            val color = colorOf(if (hasScrapped) R.color.orange_primary else R.color.text_secondary)
-            btnScrap.text = if (hasScrapped) "★ 스크랩" else "☆ 스크랩"
+            val color = colorOf(if (post.isScrapped) R.color.orange_primary else R.color.text_secondary)
+            btnScrap.text = if (post.isScrapped) "★ 스크랩" else "☆ 스크랩"
             btnScrap.setTextColor(color)
             btnScrap.strokeColor = android.content.res.ColorStateList.valueOf(color)
         }
@@ -136,15 +135,15 @@ class PostDetailFragment : Fragment() {
 
         // TODO: 백엔드 연동 지점 - 사용자별 공감/스크랩 상태를 DB에 저장해서 앱 재실행 후에도 유지되도록
         btnLike.setOnClickListener {
-            if (hasLiked) post.likeCount-- else post.likeCount++
-            hasLiked = !hasLiked
+            if (post.hasLiked) post.likeCount-- else post.likeCount++
+            post.hasLiked = !post.hasLiked
             refreshLikeButton()
         }
 
         btnScrap.setOnClickListener {
-            hasScrapped = !hasScrapped
+            post.isScrapped = !post.isScrapped
             refreshScrapButton()
-            val message = if (hasScrapped) "스크랩했습니다." else "스크랩을 취소했습니다."
+            val message = if (post.isScrapped) "스크랩했습니다." else "스크랩을 취소했습니다."
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 

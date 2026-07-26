@@ -59,10 +59,12 @@ class BoardFragment : Fragment() {
         val category: String,
         val authorInitial: String,
         val authorColor: Int,
-        val isNew: Boolean = false,
+        var isNew: Boolean = false,
         var likeCount: Int = 0,
         val comments: MutableList<Comment> = mutableListOf(),
-        val isMine: Boolean = false
+        val isMine: Boolean = false,
+        var hasLiked: Boolean = false,
+        var isScrapped: Boolean = false
     ) {
         /** 게시판 목록 카드에 표시할 "조회 n   댓글 n   · 시간" 형태 문자열 */
         fun metaText(): String {
@@ -373,6 +375,7 @@ class BoardFragment : Fragment() {
         // ==== 수정 시작: 게시글 상세 화면으로 이동 + 조회수 증가 (기존: Toast 스텁) ====
         card.setOnClickListener {
             post.viewCount++
+            post.isNew = false
             parentFragmentManager
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, PostDetailFragment.newInstance(post.id))

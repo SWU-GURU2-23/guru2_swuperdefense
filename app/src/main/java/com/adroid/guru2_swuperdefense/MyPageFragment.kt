@@ -7,7 +7,6 @@ package com.adroid.guru2_swuperdefense
 // ============================================================================
 
 import android.app.AlertDialog
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -23,7 +22,7 @@ import androidx.fragment.app.Fragment
  * - 계정 → [AccountFragment]로 이동
  * - 설정 → 아직 내용 미정이라 Toast 스텁만 (TODO)
  * - 버전 → PackageManager에서 실제 versionName을 읽어 다이얼로그로 표시
- * - 로그아웃 → SharedPreferences("login")의 저장된 아이디 삭제 후 [LoginActivity]로 이동, 현재 액티비티 종료
+ * - 로그아웃 → 로컬 세션 종료 후 [LoginActivity]로 이동, 현재 액티비티 종료
  */
 class MyPageFragment : Fragment() {
 
@@ -42,10 +41,9 @@ class MyPageFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // TODO: 백엔드 연동 지점 - 실제 로그인 세션에서 아이디를 가져오도록 교체
-        val prefs = requireContext().getSharedPreferences("login", Context.MODE_PRIVATE)
-        val savedId = prefs.getString("id", null)
-        view.findViewById<TextView>(R.id.tvProfileId).text = savedId?.takeIf { it.isNotBlank() } ?: "guru2_user"
+        val currentUserId = AppSession.currentUserId(requireContext())
+        view.findViewById<TextView>(R.id.tvProfileId).text =
+            currentUserId?.takeIf { it.isNotBlank() } ?: "로그인 정보 없음"
 
         view.findViewById<TextView>(R.id.tvVersionValue).text = appVersionName()
 
@@ -71,10 +69,17 @@ class MyPageFragment : Fragment() {
         }
 
         view.findViewById<View>(R.id.rowLogout).setOnClickListener {
-            // TODO: 백엔드 연동 지점 - 실제 로그인 세션/토큰 종료 처리
-            prefs.edit().remove("id").apply()
-            startActivity(Intent(requireContext(), LoginActivity::class.java))
-            requireActivity().finish()
+            AlertDialog.Builder(requireContext())
+                .setTitle("로그아웃")
+                .setMessage("현재 계정에서 로그아웃하시겠습니까?")
+                .setPositiveButton("로그아웃") { _, _ ->
+                    // TODO: 백엔드 연동 지점 - 실제 인증 토큰도 함께 폐기
+                    AppSession.logOut(requireContext())
+                    startActivity(Intent(requireContext(), LoginActivity::class.java))
+                    requireActivity().finish()
+                }
+                .setNegativeButton("취소", null)
+                .show()
         }
     }
 

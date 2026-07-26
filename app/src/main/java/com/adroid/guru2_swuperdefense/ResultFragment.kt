@@ -35,6 +35,8 @@ class ResultFragment : Fragment() {
             ?: "피해 유형 확인"
 
         riskScore = arguments?.getInt(ARG_RISK_SCORE) ?: 0
+        DiagnosisSummaryStore.save(requireContext(), incidentType, riskScore)
+        ChecklistProgressStore.setActiveIncident(requireContext(), incidentType)
 
         val riskLevel = calculateRiskLevel(riskScore)
         val immediateAction = getImmediateAction(incidentType)

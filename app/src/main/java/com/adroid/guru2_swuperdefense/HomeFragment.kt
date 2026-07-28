@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 
 /**
@@ -53,6 +54,33 @@ class HomeFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
+
+        // ==== 수정 시작: SECURITY SCORE 카드 클릭 시 마지막 피해 상황 확인 결과로 이동 (기존: 클릭 불가) ====
+        // 아직 피해 상황 확인을 한 번도 진행하지 않았다면(진단 이력 없음) 이동하지 않고 안내만 표시
+        view.findViewById<View>(R.id.cardSecurityScore).setOnClickListener {
+            val diagnosis = DiagnosisSummaryStore.latest(requireContext())
+            if (diagnosis == null) {
+                Toast.makeText(
+                    requireContext(),
+                    "아직 피해 상황 확인을 진행하지 않았어요. 먼저 진단을 진행해주세요.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                parentFragmentManager
+                    .beginTransaction()
+                    .replace(
+                        R.id.fragmentContainer,
+                        ResultFragment.newInstance(
+                            incidentType = diagnosis.incidentType,
+                            riskScore = diagnosis.riskScore,
+                            hasCriticalFlag = diagnosis.hasCriticalFlag
+                        )
+                    )
+                    .addToBackStack(null)
+                    .commit()
+            }
+        }
+        // ==== 수정 끝 ====
 
         // ==== 수정 시작: 미니카드 4개 클릭 리스너 신규 추가 (원본에는 btnStartDiagnosis만 있었음) ====
         // 후속 조치 화면으로 이동
@@ -144,6 +172,11 @@ class HomeFragment : Fragment() {
 
         view.findViewById<TextView>(R.id.tvChecklistProgress).text = "7개"
 
+        // ==== 수정 시작: 위험도 점수(0~100)가 0~6점 스케일이 아닌 "피해 상황 확인 질문&주의사항
+        // 리스트.md" 배점표 기준 0~100점으로 바뀜에 따라 SECURITY SCORE 계산식 수정
+        // (safetyScore = 100 - 위험도점수, ⚠즉시긴급 문항 응답 시에도 반영). 점수 표기를 "72점"
+        // 형식으로, 점수 아래 긴급도는 결과 화면(ResultFragment)과 완전히 같은 라벨("긴급"/"주의"/
+        // "확인 필요")로 통일해 두 화면에서 다르게 보이지 않도록 함 ====
         val diagnosis = DiagnosisSummaryStore.latest(requireContext())
         val scoreView = view.findViewById<TextView>(R.id.tvSecurityScore)
         val levelView = view.findViewById<TextView>(R.id.tvSecurityLevel)
@@ -153,14 +186,12 @@ class HomeFragment : Fragment() {
             levelView.text = "피해 진단 후 표시"
             scoreRing.progress = 0
         } else {
-            val safetyScore = (100 - diagnosis.riskScore * 10).coerceIn(0, 100)
-            scoreView.text = safetyScore.toString()
-            levelView.text = when {
-                diagnosis.riskScore >= 6 -> "즉시 대응 필요"
-                diagnosis.riskScore >= 4 -> "주의 필요"
-                else -> "기본 점검 완료"
-            }
+            val safetyScore = (100 - diagnosis.riskScore).coerceIn(0, 100)
+            val riskLevel = DiagnosisSummaryStore.riskLevelLabel(diagnosis.riskScore, diagnosis.hasCriticalFlag)
+            scoreView.text = "${safetyScore}점"
+            levelView.text = riskLevel
             scoreRing.progress = safetyScore
         }
+        // ==== 수정 끝 ====
     }
 }

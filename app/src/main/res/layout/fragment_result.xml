@@ -88,54 +88,37 @@
                     android:textSize="28sp"
                     android:textStyle="bold" />
 
+                <!-- ==== 수정 시작: 홈 화면 SECURITY SCORE와 완전히 같은 값·형식으로 보안 점수 표시 신규 추가 ==== -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="보안 점수"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/tvRiskScore"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+                <!-- ==== 수정 끝 ==== -->
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="가장 먼저 해야 할 행동"
-            android:textColor="@color/text_primary"
-            android:textSize="19sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvImmediateAction"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@color/surface_light_dark"
-            android:lineSpacingExtra="5dp"
-            android:padding="18dp"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="주의사항"
-            android:textColor="@color/text_primary"
-            android:textSize="19sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvPrecaution"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:lineSpacingExtra="5dp"
-            android:textColor="@color/text_secondary"
-            android:textSize="15sp" />
-
+        <!-- ==== 수정: 내용이 길어 한 화면에 그대로 넣지 않고, 별도 화면(ResultDetailFragment)으로 이동하는
+        버튼 2개로 교체 (기존: "가장 먼저 해야 할 행동"/"주의사항" 본문을 이 화면에 통째로 표시) ==== -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnOpenGuide"
+            android:id="@+id/btnOpenImmediateAction"
             android:layout_width="match_parent"
             android:layout_height="58dp"
-            android:layout_marginTop="32dp"
-            android:text="맞춤 대응 가이드 보기"
+            android:layout_marginTop="28dp"
+            android:text="가장 먼저 해야 할 행동 확인하기"
             android:textColor="@color/background_black"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -143,10 +126,48 @@
             app:cornerRadius="14dp" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenPrecaution"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginTop="12dp"
+            android:text="주의사항 확인하기"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            app:backgroundTint="@color/card_charcoal"
+            app:cornerRadius="14dp"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp" />
+        <!-- ==== 수정 끝 ==== -->
+
+        <!-- ==== 수정 시작: 참고 공식자료 섹션 신규 추가 (URL 자동 링크로 바로 열람 가능) ==== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="참고 공식자료"
+            android:textColor="@color/text_primary"
+            android:textSize="19sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvReferences"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:autoLink="web"
+            android:lineSpacingExtra="6dp"
+            android:textColor="@color/text_secondary"
+            android:textColorLink="@color/orange_primary"
+            android:textSize="13sp" />
+        <!-- ==== 수정 끝 ==== -->
+
+        <!-- ==== 수정: "맞춤 대응 가이드 보기" 버튼 삭제 (요청에 따라 제거) ==== -->
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReturnHome"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="32dp"
             android:layout_marginBottom="24dp"
             android:text="홈으로 돌아가기"
             android:textColor="@color/text_primary"

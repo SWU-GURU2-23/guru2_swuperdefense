@@ -36,12 +36,7 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/tvNotification"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="🔔"
-                android:textSize="20sp" />
+            <!-- ==== 수정: 알림(종) 아이콘 삭제 (요청에 따라 제거) ==== -->
 
         </LinearLayout>
         <!-- ==== 수정 끝 ==== -->
@@ -50,7 +45,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="안녕하세요, 👋"
+            android:text="환영합니다, 👋"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -73,14 +68,20 @@
             android:textSize="14sp" />
 
         <!-- 보안 점수 카드 -->
+        <!-- ==== 수정 시작: id/clickable 추가 - 탭하면 마지막 피해 상황 확인 결과로 이동 (기존: 클릭 불가) ==== -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardSecurityScore"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
             app:cardBackgroundColor="@color/card_charcoal"
             app:cardCornerRadius="18dp"
             app:strokeColor="@color/card_border"
             app:strokeWidth="1dp">
+        <!-- ==== 수정 끝 ==== -->
 
             <!-- ==== 수정 시작: 디자인 캡처(0723_141548365_02) 반영 - 세로 스택 → 좌:텍스트/우:원형 게이지 구조로 변경 ==== -->
             <LinearLayout
@@ -131,15 +132,21 @@
                     android:layout_width="88dp"
                     android:layout_height="88dp">
 
-                    <!-- TODO: 백엔드 연동 지점 - progress 값을 tvSecurityScore와 동일한 실제 점수로 교체 -->
-                    <ProgressBar
+                    <!-- ==== 수정: 커스텀 ring 드로어블(bg_score_ring)이 progress 비율과 실제로
+                    그려지는 호(arc) 길이가 어긋나는 문제가 있어, Material의 검증된
+                    CircularProgressIndicator로 교체 (기존: ProgressBar + progressDrawable) ====
+                    TODO: 백엔드 연동 지점 - progress 값을 tvSecurityScore와 동일한 실제 점수로 교체 -->
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
                         android:id="@+id/scoreRing"
-                        style="?android:attr/progressBarStyleHorizontal"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:max="100"
                         android:progress="92"
-                        android:progressDrawable="@drawable/bg_score_ring" />
+                        app:indicatorColor="@color/orange_primary"
+                        app:indicatorSize="84dp"
+                        app:trackColor="@color/card_border"
+                        app:trackCornerRadius="5dp"
+                        app:trackThickness="9dp" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -208,6 +215,8 @@
                     app:layout_constraintStart_toEndOf="@id/ivDiagnosisIcon"
                     app:layout_constraintTop_toTopOf="@id/ivDiagnosisIcon" />
 
+                <!-- ==== 수정: "요."만 다음 줄로 밀려 어색하게 끊기던 문제를 글자 크기를 줄여
+                해결 (기존: 13sp) ==== -->
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -216,7 +225,7 @@
                     android:maxLines="2"
                     android:text="피해 상황을 바로 확인하세요."
                     android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
+                    android:textSize="11sp"
                     app:layout_constraintEnd_toEndOf="@id/tvDiagnosisTitle"
                     app:layout_constraintStart_toStartOf="@id/tvDiagnosisTitle"
                     app:layout_constraintTop_toBottomOf="@id/tvDiagnosisTitle" />

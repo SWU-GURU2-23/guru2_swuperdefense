@@ -11,6 +11,7 @@ class GuideFragment : Fragment() {
 
     private lateinit var incidentType: String
     private var riskScore: Int = 0
+    private var hasCriticalFlag: Boolean = false
 
     private val guideMap = mapOf(
         "문자·메신저 피싱" to listOf(
@@ -76,6 +77,7 @@ class GuideFragment : Fragment() {
             ?: "피해 유형 확인"
 
         riskScore = arguments?.getInt(ARG_RISK_SCORE) ?: 0
+        hasCriticalFlag = arguments?.getBoolean(ARG_HAS_CRITICAL_FLAG) ?: false
 
         val steps = guideMap[incidentType]
             ?: defaultSteps()
@@ -83,8 +85,9 @@ class GuideFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvGuideType).text =
             incidentType
 
+        // ==== 수정: 긴급도 판정 기준을 DiagnosisSummaryStore와 동일하게 통일 (기존: 이 파일에서만 score>=6 기준으로 따로 계산) ====
         view.findViewById<TextView>(R.id.tvGuideUrgency).text =
-            "현재 긴급도: ${calculateRiskLevel(riskScore)}"
+            "현재 긴급도: ${DiagnosisSummaryStore.riskLevelLabel(riskScore, hasCriticalFlag)}"
 
         val stepViews = listOf(
             R.id.tvStep1,
@@ -118,14 +121,6 @@ class GuideFragment : Fragment() {
             }
     }
 
-    private fun calculateRiskLevel(score: Int): String {
-        return when {
-            score >= 6 -> "긴급"
-            score >= 4 -> "주의"
-            else -> "확인 필요"
-        }
-    }
-
     private fun defaultSteps(): List<String> {
         return listOf(
             "관련 연락과 추가 행동을 중단하세요.",
@@ -139,10 +134,12 @@ class GuideFragment : Fragment() {
     companion object {
         private const val ARG_INCIDENT_TYPE = "incident_type"
         private const val ARG_RISK_SCORE = "risk_score"
+        private const val ARG_HAS_CRITICAL_FLAG = "has_critical_flag"
 
         fun newInstance(
             incidentType: String,
-            riskScore: Int
+            riskScore: Int,
+            hasCriticalFlag: Boolean = false
         ): GuideFragment {
             return GuideFragment().apply {
                 arguments = Bundle().apply {
@@ -154,6 +151,11 @@ class GuideFragment : Fragment() {
                     putInt(
                         ARG_RISK_SCORE,
                         riskScore
+                    )
+
+                    putBoolean(
+                        ARG_HAS_CRITICAL_FLAG,
+                        hasCriticalFlag
                     )
                 }
             }

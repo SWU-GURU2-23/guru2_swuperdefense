@@ -136,10 +136,13 @@
                     그려지는 호(arc) 길이가 어긋나는 문제가 있어, Material의 검증된
                     CircularProgressIndicator로 교체 (기존: ProgressBar + progressDrawable) ====
                     TODO: 백엔드 연동 지점 - progress 값을 tvSecurityScore와 동일한 실제 점수로 교체 -->
+                    <!-- ==== 수정: android:indeterminate 기본값이 true라 progress를 줘도 계속
+                    빙글빙글 도는 인디케이터로만 보이던 문제 - 명시적으로 false 지정 ==== -->
                     <com.google.android.material.progressindicator.CircularProgressIndicator
                         android:id="@+id/scoreRing"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
+                        android:indeterminate="false"
                         android:max="100"
                         android:progress="92"
                         app:indicatorColor="@color/orange_primary"

@@ -88,12 +88,13 @@
                     android:textSize="28sp"
                     android:textStyle="bold" />
 
-                <!-- ==== 수정 시작: 홈 화면 SECURITY SCORE와 완전히 같은 값·형식으로 보안 점수 표시 신규 추가 ==== -->
+                <!-- ==== 수정: "예"라고 답한 문항의 배점이 쌓이는 위험도 점수를 홈 화면과 동일한
+                값으로 표시 (기존: 보안 점수라는 이름으로 100-위험도점수를 표시) ==== -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="18dp"
-                    android:text="보안 점수"
+                    android:text="위험도 점수"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 

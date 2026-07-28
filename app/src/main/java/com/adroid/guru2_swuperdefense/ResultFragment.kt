@@ -62,11 +62,11 @@ class ResultFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvRiskLevel).text =
             riskLevel
 
-        // ==== 수정 시작: 홈 화면 SECURITY SCORE와 같은 값(100-위험도점수)을 같은 방식("00점")으로
-        // 표시 (기존: 위험도 원점수를 그대로 표시해 홈 화면 점수와 서로 다르게 보였음) ====
-        val safetyScore = (100 - riskScore).coerceIn(0, 100)
+        // ==== 수정: "예"라고 답할수록 점수가 쌓이는 원래 방식대로 위험도 원점수를 그대로 "점수/100"
+        // 형식으로 표시 (100-위험도점수로 뒤집어서 보여주던 방식을 되돌림). 홈 화면도 같은 값을
+        // 쓰도록 HomeFragment에서 동일하게 diagnosis.riskScore를 그대로 사용함 ====
         view.findViewById<TextView>(R.id.tvRiskScore).text =
-            "${safetyScore}점"
+            "$riskScore/100"
         // ==== 수정 끝 ====
 
         // ==== 수정 시작: 참고 공식자료 링크 표시 (자동 링크로 눌러서 바로 열람 가능) ====

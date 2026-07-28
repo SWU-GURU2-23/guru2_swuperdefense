@@ -172,11 +172,9 @@ class HomeFragment : Fragment() {
 
         view.findViewById<TextView>(R.id.tvChecklistProgress).text = "7개"
 
-        // ==== 수정 시작: 위험도 점수(0~100)가 0~6점 스케일이 아닌 "피해 상황 확인 질문&주의사항
-        // 리스트.md" 배점표 기준 0~100점으로 바뀜에 따라 SECURITY SCORE 계산식 수정
-        // (safetyScore = 100 - 위험도점수, ⚠즉시긴급 문항 응답 시에도 반영). 점수 표기를 "72점"
-        // 형식으로, 점수 아래 긴급도는 결과 화면(ResultFragment)과 완전히 같은 라벨("긴급"/"주의"/
-        // "확인 필요")로 통일해 두 화면에서 다르게 보이지 않도록 함 ====
+        // ==== 수정: SECURITY SCORE는 "위험도 점수"(결과 화면, 예로 답할수록 쌓임)와 반대 개념인
+        // "안전 점수"이므로 100-위험도점수로 계산해 표시함 (안전할수록 점수·게이지가 높게/많이
+        // 채워짐). 결과 화면과 같은 "점수/100" 형식으로 통일 ====
         val diagnosis = DiagnosisSummaryStore.latest(requireContext())
         val scoreView = view.findViewById<TextView>(R.id.tvSecurityScore)
         val levelView = view.findViewById<TextView>(R.id.tvSecurityLevel)
@@ -188,7 +186,7 @@ class HomeFragment : Fragment() {
         } else {
             val safetyScore = (100 - diagnosis.riskScore).coerceIn(0, 100)
             val riskLevel = DiagnosisSummaryStore.riskLevelLabel(diagnosis.riskScore, diagnosis.hasCriticalFlag)
-            scoreView.text = "${safetyScore}점"
+            scoreView.text = "$safetyScore/100"
             levelView.text = riskLevel
             scoreRing.progress = safetyScore
         }

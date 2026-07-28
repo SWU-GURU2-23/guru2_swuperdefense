@@ -55,17 +55,14 @@ class HomeFragment : Fragment() {
         }
 
         // ==== 수정 시작: 미니카드 4개 클릭 리스너 신규 추가 (원본에는 btnStartDiagnosis만 있었음) ====
-        // 대응 체크리스트: 진행 중인 사고유형이 있으면 이어서 열고, 없으면 진단부터 시작
+        // 후속 조치 화면으로 이동
         view.findViewById<View>(R.id.cardChecklist).setOnClickListener {
-            val activeIncident = ChecklistProgressStore.activeIncident(requireContext())
-            val destination = if (activeIncident == null) {
-                DiagnosisFragment()
-            } else {
-                ChecklistFragment.newInstance(activeIncident)
-            }
             parentFragmentManager
                 .beginTransaction()
-                .replace(R.id.fragmentContainer, destination)
+                .replace(
+                    R.id.fragmentContainer,
+                    FollowUpFragment()
+                )
                 .addToBackStack(null)
                 .commit()
         }
@@ -145,16 +142,7 @@ class HomeFragment : Fragment() {
                 "최근 결과: ${SmishingAnalyzer.riskLevelLabel(result.score)}"
             }
 
-        val activeIncident = ChecklistProgressStore.activeIncident(requireContext())
-        val completedSteps = activeIncident?.let {
-            ChecklistProgressStore.completedCount(requireContext(), it)
-        } ?: 0
-        view.findViewById<TextView>(R.id.tvChecklistProgress).text =
-            if (activeIncident == null) "진단 후 시작" else "$completedSteps / 5 완료"
-        view.findViewById<ProgressBar>(R.id.progressChecklist).apply {
-            max = ChecklistProgressStore.STEP_COUNT
-            progress = completedSteps
-        }
+        view.findViewById<TextView>(R.id.tvChecklistProgress).text = "7개"
 
         val diagnosis = DiagnosisSummaryStore.latest(requireContext())
         val scoreView = view.findViewById<TextView>(R.id.tvSecurityScore)

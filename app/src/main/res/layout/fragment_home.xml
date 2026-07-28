@@ -168,7 +168,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="18dp"
             app:cardBackgroundColor="@color/card_charcoal"
             app:cardCornerRadius="18dp"
             app:strokeColor="@color/card_border"
@@ -178,7 +178,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:minHeight="88dp"
-                android:padding="18dp">
+                android:padding="14dp">
 
                 <TextView
                     android:id="@+id/ivDiagnosisIcon"
@@ -198,10 +198,11 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="14dp"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginEnd="6dp"
+                    android:maxLines="1"
                     android:text="피해가 의심되나요?"
                     android:textColor="@color/text_primary"
-                    android:textSize="17sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
                     app:layout_constraintEnd_toStartOf="@id/btnStartDiagnosis"
                     app:layout_constraintStart_toEndOf="@id/ivDiagnosisIcon"
@@ -263,14 +264,13 @@
                 app:strokeColor="@color/card_border"
                 app:strokeWidth="1dp">
 
-                <!-- ==== 수정 시작: 디자인 캡처 반영 - 아이콘 배지 + 진행상태(3/7단계) + 진행바 추가 ==== -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <!-- ==== 수정 시작: 아이콘을 원형 배지 안에 배치 (기존: 이모지+텍스트 한 줄) ==== -->
+                    <!-- 아이콘 + 제목 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -291,45 +291,34 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="10dp"
                             android:layout_weight="1"
-                            android:text="대응 체크리스트"
+                            android:text="후속 조치"
                             android:textColor="@color/text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
                     </LinearLayout>
-                    <!-- ==== 수정 끝 ==== -->
 
+                    <!-- 제공 서비스 -->
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
-                        android:text="진행 중"
+                        android:text="제공 서비스"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
-                    <!-- TODO: 백엔드 연동 지점 - checklist_progress 테이블 조회 결과로 단계/진행률 교체 -->
+                    <!-- 서비스 개수 -->
                     <TextView
                         android:id="@+id/tvChecklistProgress"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="3 / 7 단계"
+                        android:text="7개"
                         android:textColor="@color/orange_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
 
-                    <ProgressBar
-                        android:id="@+id/progressChecklist"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="6dp"
-                        android:layout_marginTop="10dp"
-                        android:max="100"
-                        android:progress="43"
-                        android:progressTint="@color/orange_primary" />
-
                 </LinearLayout>
-                <!-- ==== 수정 끝 ==== -->
 
             </com.google.android.material.card.MaterialCardView>
 

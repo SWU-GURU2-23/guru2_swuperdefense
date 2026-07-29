@@ -19,7 +19,6 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.adroid.guru2_swuperdefense.data.remote.model.BoardPostDto
-import com.adroid.guru2_swuperdefense.data.repository.AuthRepository
 import com.adroid.guru2_swuperdefense.data.repository.BoardRepository
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.android.material.button.MaterialButton
@@ -47,11 +46,11 @@ class BoardFragment : Fragment() {
         val timeAgo: String
     )
 
-    // 작성자 UID와 현재 Firebase UID를 비교한 결과를 isMine으로 유지한다.
+    // 실제 작성자 UID는 공개 게시글 문서에 저장하지 않고, 저장소가 확인한 소유 여부만 유지한다.
     data class Post(
         val documentId: String,
         val id: Int,
-        val authorUid: String,
+        val authorKey: String,
         val authorName: String,
         val isAnonymous: Boolean,
         val tag: String,
@@ -86,7 +85,7 @@ class BoardFragment : Fragment() {
         private val pinnedNotice = Post(
             documentId = "__pinned_notice__",
             id = PINNED_NOTICE_ID,
-            authorUid = "",
+            authorKey = "",
             authorName = "SWUPERDEPENSE",
             isAnonymous = false,
             tag = "공지",
@@ -126,13 +125,12 @@ class BoardFragment : Fragment() {
         }
 
         fun toUiPost(remote: BoardPostDto): Post {
-            val currentUid = AuthRepository.instance.currentUser?.uid
             val authorName =
                 if (remote.isAnonymous) "익명" else remote.authorDisplayName.ifBlank { "사용자" }
             return Post(
                 documentId = remote.documentId,
                 id = remote.localId,
-                authorUid = remote.authorUid,
+                authorKey = remote.documentId,
                 authorName = authorName,
                 isAnonymous = remote.isAnonymous,
                 tag = remote.category,
@@ -144,14 +142,18 @@ class BoardFragment : Fragment() {
                 timeAgo = timeAgo(remote.createdAt?.toDate()?.time),
                 category = remote.category,
                 authorInitial = if (remote.isAnonymous) "익" else authorName.take(1),
-                authorColor = if (remote.isAnonymous) 0xFF6B6B6B.toInt() else avatarColor(remote.authorUid),
+                authorColor = if (remote.isAnonymous) {
+                    0xFF6B6B6B.toInt()
+                } else {
+                    avatarColor(remote.documentId)
+                },
                 isNew = true,
                 likeCount = remote.likeCount.toInt(),
-                isMine = remote.authorUid == currentUid
+                isMine = remote.isMine
             )
         }
 
-        private fun avatarColor(authorUid: String): Int {
+        private fun avatarColor(authorKey: String): Int {
             val colors = intArrayOf(
                 0xFFFF7A00.toInt(),
                 0xFF5B9DFF.toInt(),
@@ -159,7 +161,7 @@ class BoardFragment : Fragment() {
                 0xFF9B7CF5.toInt(),
                 0xFFD97CF5.toInt()
             )
-            return colors[(authorUid.hashCode() and Int.MAX_VALUE) % colors.size]
+            return colors[(authorKey.hashCode() and Int.MAX_VALUE) % colors.size]
         }
 
         private fun timeAgo(timestamp: Long?): String {

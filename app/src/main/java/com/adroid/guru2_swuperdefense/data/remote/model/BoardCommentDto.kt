@@ -5,7 +5,6 @@ import com.google.firebase.firestore.DocumentSnapshot
 
 data class BoardCommentDto(
     val documentId: String,
-    val authorUid: String,
     val authorDisplayName: String,
     val body: String,
     val isAnonymous: Boolean,
@@ -14,11 +13,9 @@ data class BoardCommentDto(
 ) {
     companion object {
         fun from(document: DocumentSnapshot): BoardCommentDto? {
-            val authorUid = document.getString("authorUid") ?: return null
             val body = document.getString("body") ?: return null
             return BoardCommentDto(
                 documentId = document.id,
-                authorUid = authorUid,
                 authorDisplayName = document.getString("authorDisplayName").orEmpty(),
                 body = body,
                 isAnonymous = document.getBoolean("isAnonymous") ?: false,

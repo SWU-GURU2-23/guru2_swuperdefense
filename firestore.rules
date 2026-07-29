@@ -6,38 +6,372 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function postPath(postId) {
+      return /databases/$(database)/documents/posts/$(postId);
+    }
+
+    function postOwnerPath(postId) {
+      return /databases/$(database)/documents/postOwners/$(postId);
+    }
+
     function isAdmin() {
       return signedIn()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid))
-          .data.isAdmin == true;
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isPostOwner(postId) {
+      return signedIn()
+        && exists(postOwnerPath(postId))
+        && get(postOwnerPath(postId)).data.ownerUid == request.auth.uid;
+    }
+
+    function validCategory(category) {
+      return category in [
+        '피싱/스미싱',
+        '계정 도용',
+        '금전 사기',
+        '보이스피싱',
+        '기타'
+      ];
+    }
+
+    function validPostContent(data) {
+      return data.localId is int
+        && data.authorDisplayName is string
+        && data.authorDisplayName.size() > 0
+        && data.authorDisplayName.size() <= 40
+        && data.isAnonymous is bool
+        && (!data.isAnonymous || data.authorDisplayName == '익명')
+        && data.category is string
+        && validCategory(data.category)
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 100
+        && data.body is string
+        && data.body.size() > 0
+        && data.body.size() <= 5000;
+    }
+
+    function validNewPost() {
+      return request.resource.data.keys().hasAll([
+          'localId',
+          'authorDisplayName',
+          'isAnonymous',
+          'category',
+          'title',
+          'body',
+          'createdAt',
+          'updatedAt',
+          'viewCount',
+          'commentCount',
+          'likeCount',
+          'nextAnonymousNumber'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'localId',
+          'authorDisplayName',
+          'isAnonymous',
+          'category',
+          'title',
+          'body',
+          'createdAt',
+          'updatedAt',
+          'viewCount',
+          'commentCount',
+          'likeCount',
+          'nextAnonymousNumber'
+        ])
+        && validPostContent(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.viewCount == 0
+        && request.resource.data.commentCount == 0
+        && request.resource.data.likeCount == 0
+        && request.resource.data.nextAnonymousNumber == 1;
+    }
+
+    function validOwnerPostEdit() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'authorDisplayName',
+          'isAnonymous',
+          'category',
+          'title',
+          'body',
+          'updatedAt'
+        ])
+        && validPostContent(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function validViewUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['viewCount'])
+        && request.resource.data.viewCount is int
+        && request.resource.data.viewCount == resource.data.viewCount + 1;
+    }
+
+    function validCommentCounterUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['commentCount', 'nextAnonymousNumber'])
+        && request.resource.data.commentCount is int
+        && request.resource.data.commentCount == resource.data.commentCount + 1
+        && request.resource.data.nextAnonymousNumber is int
+        && (
+          request.resource.data.nextAnonymousNumber == resource.data.nextAnonymousNumber
+          || request.resource.data.nextAnonymousNumber == resource.data.nextAnonymousNumber + 1
+        );
+    }
+
+    function validLikeCounterUpdate(postId) {
+      let likePath = /databases/$(database)/documents/posts/$(postId)/likes/$(request.auth.uid);
+      let added = !exists(likePath)
+        && existsAfter(likePath)
+        && request.resource.data.likeCount == resource.data.likeCount + 1;
+      let removed = exists(likePath)
+        && !existsAfter(likePath)
+        && request.resource.data.likeCount == resource.data.likeCount - 1;
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['likeCount'])
+        && request.resource.data.likeCount is int
+        && request.resource.data.likeCount >= 0
+        && (added || removed);
+    }
+
+    function validComment(data) {
+      return data.keys().hasAll([
+          'authorDisplayName',
+          'body',
+          'isAnonymous',
+          'anonymousNumber',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'authorDisplayName',
+          'body',
+          'isAnonymous',
+          'anonymousNumber',
+          'createdAt'
+        ])
+        && data.authorDisplayName is string
+        && data.authorDisplayName.size() > 0
+        && data.authorDisplayName.size() <= 40
+        && data.body is string
+        && data.body.size() > 0
+        && data.body.size() <= 1000
+        && data.isAnonymous is bool
+        && (
+          (
+            data.isAnonymous
+            && data.authorDisplayName == '익명'
+            && data.anonymousNumber is int
+            && data.anonymousNumber > 0
+          )
+          || (
+            !data.isAnonymous
+            && data.anonymousNumber == null
+          )
+        )
+        && data.createdAt == request.time;
     }
 
     match /users/{userId} {
       allow read: if signedIn() && request.auth.uid == userId;
+
       allow create: if signedIn()
         && request.auth.uid == userId
-        && request.resource.data.isAdmin != true;
+        && request.resource.data.keys().hasAll([
+          'email',
+          'displayName',
+          'isAdmin',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'displayName',
+          'isAdmin',
+          'createdAt'
+        ])
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.isAdmin == false
+        && request.resource.data.createdAt == request.time;
+
       allow update: if signedIn()
         && request.auth.uid == userId
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']);
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['email', 'displayName'])
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40;
+
       allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /postOwners/{postId} {
+      allow get, list: if isAdmin()
+        || (signedIn() && resource.data.ownerUid == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['ownerUid', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['ownerUid', 'createdAt'])
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && !exists(postPath(postId))
+        && existsAfter(postPath(postId));
+
+      allow update: if false;
+
+      allow delete: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid || isAdmin())
+        && !existsAfter(postPath(postId));
     }
 
     match /posts/{postId} {
       allow read: if signedIn();
+
       allow create: if signedIn()
-        && request.resource.data.authorUid == request.auth.uid;
+        && validNewPost()
+        && getAfter(postOwnerPath(postId)).data.ownerUid == request.auth.uid;
 
-      // 조회수·댓글 수·공감 수 갱신을 위해 로그인 사용자의 update는 허용하되,
-      // 작성자 UID 자체를 다른 사람으로 바꾸는 것은 막는다.
-      allow update: if signedIn()
-        && request.resource.data.authorUid == resource.data.authorUid;
+      allow update: if signedIn() && (
+        (
+          (
+            isPostOwner(postId)
+            || (
+              resource.data.keys().hasAny(['authorUid'])
+              && resource.data.authorUid == request.auth.uid
+            )
+          )
+          && validOwnerPostEdit()
+        )
+        || validViewUpdate()
+        || validCommentCounterUpdate()
+        || validLikeCounterUpdate(postId)
+      );
+
       allow delete: if signedIn()
-        && (resource.data.authorUid == request.auth.uid || isAdmin());
+        && (
+          isPostOwner(postId)
+          || (
+            resource.data.keys().hasAny(['authorUid'])
+            && resource.data.authorUid == request.auth.uid
+          )
+          || isAdmin()
+        )
+        && (
+          !exists(postOwnerPath(postId))
+          || !existsAfter(postOwnerPath(postId))
+        );
 
-      // 수업용 테스트 범위에서는 댓글·공감·스크랩·읽음 데이터를 로그인 사용자에게 허용한다.
-      match /{subCollection}/{documentId} {
-        allow read, write: if signedIn();
+      match /comments/{commentId} {
+        allow read: if signedIn() && exists(postPath(postId));
+
+        allow create: if signedIn()
+          && exists(postPath(postId))
+          && validComment(request.resource.data)
+          && getAfter(
+            /databases/$(database)/documents/posts/$(postId)/commentOwners/$(commentId)
+          ).data.ownerUid == request.auth.uid;
+
+        allow update: if false;
+
+        allow delete: if signedIn()
+          && (
+            isAdmin()
+            || isPostOwner(postId)
+            || get(
+              /databases/$(database)/documents/posts/$(postId)/commentOwners/$(commentId)
+            ).data.ownerUid == request.auth.uid
+          );
+      }
+
+      match /commentOwners/{commentId} {
+        allow get: if isAdmin()
+          || (
+            signedIn()
+            && resource.data.ownerUid == request.auth.uid
+          );
+        allow list: if false;
+
+        allow create: if signedIn()
+          && request.resource.data.keys().hasAll(['ownerUid', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['ownerUid', 'createdAt'])
+          && request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && !exists(
+            /databases/$(database)/documents/posts/$(postId)/comments/$(commentId)
+          )
+          && existsAfter(
+            /databases/$(database)/documents/posts/$(postId)/comments/$(commentId)
+          );
+
+        allow update: if false;
+
+        allow delete: if signedIn()
+          && (
+            resource.data.ownerUid == request.auth.uid
+            || isPostOwner(postId)
+            || isAdmin()
+          )
+          && !existsAfter(
+            /databases/$(database)/documents/posts/$(postId)/comments/$(commentId)
+          );
+      }
+
+      match /likes/{userId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && exists(postPath(postId))
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
+
+      match /scraps/{userId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && exists(postPath(postId))
+          && request.resource.data.keys().hasOnly(['createdAt'])
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
+
+      match /reads/{userId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, update: if signedIn()
+          && request.auth.uid == userId
+          && exists(postPath(postId))
+          && request.resource.data.keys().hasOnly(['readAt'])
+          && request.resource.data.readAt == request.time;
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
+
+      match /anonymousAuthors/{userId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create: if signedIn()
+          && request.auth.uid == userId
+          && exists(postPath(postId))
+          && request.resource.data.keys().hasOnly(['number', 'createdAt'])
+          && request.resource.data.number is int
+          && request.resource.data.number > 0
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if signedIn()
+          && (
+            request.auth.uid == userId
+            || isPostOwner(postId)
+            || isAdmin()
+          );
       }
     }
   }

@@ -14,8 +14,8 @@ import com.google.firebase.firestore.Query
 /**
  * 여러 기기에서 공유하는 게시판 데이터의 Firestore 접근 지점.
  *
- * Fragment가 Firestore 컬렉션 경로와 트랜잭션을 직접 다루지 않도록 모든 원격 작업을
- * 이 클래스에 모았다. 화면 연결은 이 저장소의 메서드만 호출하도록 진행한다.
+ * 공개 게시글·댓글 문서에는 Firebase UID를 저장하지 않는다. 작성자 UID는 보안 규칙으로
+ * 보호되는 별도 소유권 문서에 저장해 화면상의 익명이 DB 조회에서도 유지되도록 한다.
  */
 class BoardRepository private constructor() {
     data class UserPostState(
@@ -27,20 +27,59 @@ class BoardRepository private constructor() {
     private val firestore = FirebaseFirestore.getInstance()
     private val authRepository = AuthRepository.instance
     private val posts = firestore.collection(POSTS_COLLECTION)
+    private val postOwners = firestore.collection(POST_OWNERS_COLLECTION)
 
     fun observePosts(
         onChanged: (List<BoardPostDto>) -> Unit,
         onError: (Throwable) -> Unit
-    ): ListenerRegistration =
-        posts.orderBy("createdAt", Query.Direction.DESCENDING)
+    ): ListenerRegistration {
+        val uid = requireNotNull(authRepository.currentUser?.uid) { "로그인이 필요합니다." }
+        var postDocuments: List<DocumentSnapshot> = emptyList()
+        var ownedPostIds: Set<String> = emptySet()
+        var postsLoaded = false
+        var ownershipLoaded = false
+
+        fun emitIfReady() {
+            if (!postsLoaded || !ownershipLoaded) return
+            onChanged(
+                postDocuments.mapNotNull { document ->
+                    BoardPostDto.from(
+                        document = document,
+                        isMine = document.id in ownedPostIds ||
+                            document.getString(LEGACY_AUTHOR_UID_FIELD) == uid
+                    )
+                }
+            )
+        }
+
+        val postRegistration = posts.orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     onError(error)
                     return@addSnapshotListener
                 }
-                onChanged(snapshot?.documents.orEmpty().mapNotNull(BoardPostDto::from))
+                postDocuments = snapshot?.documents.orEmpty()
+                postsLoaded = true
+                emitIfReady()
             }
+
+        val ownerRegistration = postOwners.whereEqualTo(OWNER_UID_FIELD, uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+                ownedPostIds = snapshot?.documents.orEmpty().mapTo(mutableSetOf()) { it.id }
+                ownershipLoaded = true
+                emitIfReady()
+            }
+
+        return ListenerRegistration {
+            postRegistration.remove()
+            ownerRegistration.remove()
+        }
+    }
 
     fun observeComments(
         postDocumentId: String,
@@ -58,44 +97,68 @@ class BoardRepository private constructor() {
                 onChanged(snapshot?.documents.orEmpty().mapNotNull(BoardCommentDto::from))
             }
 
-    fun getPostByLocalId(localId: Int): Task<BoardPostDto?> =
-        posts.whereEqualTo("localId", localId)
+    fun getPostByLocalId(localId: Int): Task<BoardPostDto?> {
+        val uid = requireNotNull(authRepository.currentUser?.uid) { "로그인이 필요합니다." }
+        return posts.whereEqualTo("localId", localId)
             .limit(1)
             .get()
-            .continueWith { task ->
-                if (!task.isSuccessful) {
-                    throw task.exception
+            .continueWithTask { postTask ->
+                if (!postTask.isSuccessful) {
+                    throw postTask.exception
                         ?: IllegalStateException("게시글을 불러올 수 없습니다.")
                 }
-                task.result?.documents?.firstOrNull()?.let(BoardPostDto::from)
+                val document = postTask.result?.documents?.firstOrNull()
+                    ?: return@continueWithTask Tasks.forResult(null)
+                loadOwnedPostIds(uid).continueWith { ownerTask ->
+                    if (!ownerTask.isSuccessful) {
+                        throw ownerTask.exception
+                            ?: IllegalStateException("게시글 소유권을 확인할 수 없습니다.")
+                    }
+                    BoardPostDto.from(
+                        document,
+                        document.id in ownerTask.result ||
+                            document.getString(LEGACY_AUTHOR_UID_FIELD) == uid
+                    )
+                }
             }
+    }
 
     fun getScrappedPosts(): Task<List<BoardPostDto>> {
         val uid = requireNotNull(authRepository.currentUser?.uid) { "로그인이 필요합니다." }
-        return posts.orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(100)
-            .get()
-            .continueWithTask { postsTask ->
-                if (!postsTask.isSuccessful) {
-                    throw postsTask.exception
-                        ?: IllegalStateException("게시글을 불러올 수 없습니다.")
-                }
-                val checkTasks = postsTask.result?.documents.orEmpty().mapNotNull { document ->
-                    val post = BoardPostDto.from(document) ?: return@mapNotNull null
-                    document.reference.collection(SCRAPS_COLLECTION).document(uid).get()
-                        .continueWith { scrapTask ->
-                            if (scrapTask.isSuccessful && scrapTask.result.exists()) post else null
-                        }
-                }
-                Tasks.whenAllSuccess<BoardPostDto?>(checkTasks)
+        return loadOwnedPostIds(uid).continueWithTask { ownerTask ->
+            if (!ownerTask.isSuccessful) {
+                throw ownerTask.exception
+                    ?: IllegalStateException("게시글 소유권을 확인할 수 없습니다.")
             }
-            .continueWith { resultTask ->
-                if (!resultTask.isSuccessful) {
-                    throw resultTask.exception
-                        ?: IllegalStateException("스크랩 목록을 불러올 수 없습니다.")
+            val ownedPostIds = ownerTask.result
+            posts.orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(100)
+                .get()
+                .continueWithTask { postsTask ->
+                    if (!postsTask.isSuccessful) {
+                        throw postsTask.exception
+                            ?: IllegalStateException("게시글을 불러올 수 없습니다.")
+                    }
+                    val checkTasks = postsTask.result?.documents.orEmpty().mapNotNull { document ->
+                        val post = BoardPostDto.from(
+                            document,
+                            document.id in ownedPostIds ||
+                                document.getString(LEGACY_AUTHOR_UID_FIELD) == uid
+                        ) ?: return@mapNotNull null
+                        document.reference.collection(SCRAPS_COLLECTION).document(uid).get()
+                            .continueWith { scrapTask ->
+                                if (scrapTask.isSuccessful && scrapTask.result.exists()) post else null
+                            }
+                    }
+                    Tasks.whenAllSuccess<BoardPostDto?>(checkTasks)
                 }
-                resultTask.result.filterNotNull()
+        }.continueWith { resultTask ->
+            if (!resultTask.isSuccessful) {
+                throw resultTask.exception
+                    ?: IllegalStateException("스크랩 목록을 불러올 수 없습니다.")
             }
+            resultTask.result.filterNotNull()
+        }
     }
 
     fun createPost(
@@ -105,14 +168,19 @@ class BoardRepository private constructor() {
         isAnonymous: Boolean
     ): Task<DocumentReference> {
         val user = requireNotNull(authRepository.currentUser) { "로그인이 필요합니다." }
-        val email = user.email.orEmpty()
         val document = posts.document()
+        val ownerDocument = postOwners.document(document.id)
         val localId = document.id.hashCode() and Int.MAX_VALUE
-        return document.set(
+        val batch = firestore.batch()
+        batch.set(
+            document,
             mapOf(
                 "localId" to localId,
-                "authorUid" to user.uid,
-                "authorDisplayName" to if (isAnonymous) "익명" else email.substringBefore("@"),
+                "authorDisplayName" to if (isAnonymous) {
+                    "익명"
+                } else {
+                    user.email.orEmpty().substringBefore("@")
+                },
                 "isAnonymous" to isAnonymous,
                 "category" to category,
                 "title" to title,
@@ -124,7 +192,15 @@ class BoardRepository private constructor() {
                 "likeCount" to 0,
                 "nextAnonymousNumber" to 1
             )
-        ).continueWith { saveTask ->
+        )
+        batch.set(
+            ownerDocument,
+            mapOf(
+                OWNER_UID_FIELD to user.uid,
+                "createdAt" to FieldValue.serverTimestamp()
+            )
+        )
+        return batch.commit().continueWith { saveTask ->
             if (!saveTask.isSuccessful) {
                 throw saveTask.exception
                     ?: IllegalStateException("게시글을 저장할 수 없습니다.")
@@ -146,7 +222,11 @@ class BoardRepository private constructor() {
                 "category" to category,
                 "title" to title,
                 "body" to body,
-                "authorDisplayName" to if (isAnonymous) "익명" else email.substringBefore("@"),
+                "authorDisplayName" to if (isAnonymous) {
+                    "익명"
+                } else {
+                    email.substringBefore("@")
+                },
                 "isAnonymous" to isAnonymous,
                 "updatedAt" to FieldValue.serverTimestamp()
             )
@@ -155,21 +235,20 @@ class BoardRepository private constructor() {
 
     fun deletePost(documentId: String): Task<Void> {
         val post = posts.document(documentId)
-        val childCollections = listOf(
-            COMMENTS_COLLECTION,
-            LIKES_COLLECTION,
-            SCRAPS_COLLECTION,
-            READS_COLLECTION,
-            ANONYMOUS_AUTHORS_COLLECTION
-        )
-        return Tasks.whenAll(childCollections.map { deleteCollection(post, it) })
-            .continueWithTask { cleanupTask ->
-                if (!cleanupTask.isSuccessful) {
-                    throw cleanupTask.exception
-                        ?: IllegalStateException("게시글의 연결 데이터를 삭제할 수 없습니다.")
-                }
-                post.delete()
+        return post.get().continueWithTask { postTask ->
+            if (!postTask.isSuccessful) {
+                throw postTask.exception
+                    ?: IllegalStateException("게시글을 확인할 수 없습니다.")
             }
+            if (postTask.result.getString(LEGACY_AUTHOR_UID_FIELD) != null) {
+                post.delete()
+            } else {
+                val batch = firestore.batch()
+                batch.delete(postOwners.document(documentId))
+                batch.delete(post)
+                batch.commit()
+            }
+        }
     }
 
     fun addComment(
@@ -180,11 +259,17 @@ class BoardRepository private constructor() {
         val user = requireNotNull(authRepository.currentUser) { "로그인이 필요합니다." }
         val post = posts.document(postDocumentId)
         val comment = post.collection(COMMENTS_COLLECTION).document()
+        val commentOwner = post.collection(COMMENT_OWNERS_COLLECTION).document(comment.id)
+
         if (!isAnonymous) {
             val batch = firestore.batch()
+            batch.set(comment, commentData(user.email, body, false, null))
             batch.set(
-                comment,
-                commentData(user.uid, user.email, body, false, null)
+                commentOwner,
+                mapOf(
+                    OWNER_UID_FIELD to user.uid,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
             )
             batch.update(post, "commentCount", FieldValue.increment(1))
             return batch.commit()
@@ -208,9 +293,13 @@ class BoardRepository private constructor() {
                 )
                 transaction.update(post, "nextAnonymousNumber", number + 1)
             }
+            transaction.set(comment, commentData(user.email, body, true, number))
             transaction.set(
-                comment,
-                commentData(user.uid, user.email, body, true, number)
+                commentOwner,
+                mapOf(
+                    OWNER_UID_FIELD to user.uid,
+                    "createdAt" to FieldValue.serverTimestamp()
+                )
             )
             transaction.update(post, "commentCount", FieldValue.increment(1))
             null
@@ -276,35 +365,29 @@ class BoardRepository private constructor() {
         posts.document(postDocumentId)
             .update("viewCount", FieldValue.increment(1))
 
-    private fun deleteCollection(
-        parent: DocumentReference,
-        collectionName: String
-    ): Task<Void> =
-        parent.collection(collectionName).get().continueWithTask { queryTask ->
-            if (!queryTask.isSuccessful) {
-                throw queryTask.exception
-                    ?: IllegalStateException("$collectionName 데이터를 조회할 수 없습니다.")
+    private fun loadOwnedPostIds(uid: String): Task<Set<String>> =
+        postOwners.whereEqualTo(OWNER_UID_FIELD, uid)
+            .get()
+            .continueWith { task ->
+                if (!task.isSuccessful) {
+                    throw task.exception
+                        ?: IllegalStateException("게시글 소유권을 확인할 수 없습니다.")
+                }
+                task.result.documents.mapTo(mutableSetOf()) { it.id }
             }
-            val documents = queryTask.result?.documents.orEmpty()
-            if (documents.isEmpty()) {
-                Tasks.forResult(null)
-            } else {
-                val batch = firestore.batch()
-                documents.forEach { batch.delete(it.reference) }
-                batch.commit()
-            }
-        }
 
     private fun commentData(
-        authorUid: String,
         authorEmail: String?,
         body: String,
         isAnonymous: Boolean,
         anonymousNumber: Int?
     ): Map<String, Any?> =
         mapOf(
-            "authorUid" to authorUid,
-            "authorDisplayName" to authorEmail?.substringBefore("@").orEmpty(),
+            "authorDisplayName" to if (isAnonymous) {
+                "익명"
+            } else {
+                authorEmail?.substringBefore("@").orEmpty()
+            },
             "body" to body,
             "isAnonymous" to isAnonymous,
             "anonymousNumber" to anonymousNumber,
@@ -313,11 +396,15 @@ class BoardRepository private constructor() {
 
     companion object {
         private const val POSTS_COLLECTION = "posts"
+        private const val POST_OWNERS_COLLECTION = "postOwners"
         private const val COMMENTS_COLLECTION = "comments"
+        private const val COMMENT_OWNERS_COLLECTION = "commentOwners"
         private const val LIKES_COLLECTION = "likes"
         private const val SCRAPS_COLLECTION = "scraps"
         private const val READS_COLLECTION = "reads"
         private const val ANONYMOUS_AUTHORS_COLLECTION = "anonymousAuthors"
+        private const val OWNER_UID_FIELD = "ownerUid"
+        private const val LEGACY_AUTHOR_UID_FIELD = "authorUid"
 
         val instance: BoardRepository by lazy { BoardRepository() }
     }

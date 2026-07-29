@@ -3,13 +3,16 @@ package com.adroid.guru2_swuperdefense
 import android.content.Context
 import com.adroid.guru2_swuperdefense.data.local.AppDatabase
 import com.adroid.guru2_swuperdefense.data.local.entity.SmishingCheckEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 /**
- * 스미싱 문구 간이 판별 로직.
- * TODO: 지금은 키워드 기반 규칙으로 동작함. 백엔드 담당자가 서버 API나 공공데이터
- *       (한국인터넷진흥원 스미싱 URL 목록 등) 연동으로 고도화할 수 있는 자리.
+ * 스미싱 문구 판별 로직.
+ *
+ * 문구의 위험 신호를 규칙으로 채점하고, 문자에 포함된 URL은 공공데이터포털에서 받은
+ * KISA 피싱사이트 URL 데이터셋과 대조한다.
  */
 object SmishingAnalyzer {
 
@@ -21,36 +24,62 @@ object SmishingAnalyzer {
 
     data class AnalysisResult(
         val score: Int,
-        val riskFactors: List<RiskFactor>
+        val riskFactors: List<RiskFactor>,
+        val matchedPublicDataUrls: List<String> = emptyList(),
+        val checkedPublicDataRecords: Int = 0
     )
 
-    private val urlPattern = Regex(
-        "(https?://|www\\.|[a-zA-Z0-9-]+\\.(com|kr|net|org|io|me|ly)(/|\\s|$))",
-        RegexOption.IGNORE_CASE
-    )
     private val urgencyKeywords = listOf("긴급", "즉시", "오늘까지", "정지", "마지막", "지금 바로", "당장")
     private val moneyKeywords = listOf("입금", "계좌", "결제", "환불", "당첨", "수수료", "인증번호", "개인정보")
     private val appInstallKeywords = listOf("앱 설치", "어플 설치", "apk", "보안 앱", "원격제어")
     private val institutionKeywords = listOf("경찰", "검찰", "금융감독원", "은행", "카드사", "택배", "국세청", "정부")
     private val officialPrefixes = listOf("1588", "1544", "1600", "112", "118")
 
+    suspend fun analyze(
+        context: Context,
+        message: String,
+        sender: String
+    ): AnalysisResult = withContext(Dispatchers.Default) {
+        val dataset = KisaPhishingUrlDataset.load(context.applicationContext)
+        analyze(
+            message = message,
+            sender = sender,
+            knownPhishingUrls = dataset.normalizedUrls,
+            checkedRecordCount = dataset.recordCount
+        )
+    }
+
     /**
-     * 문구/발신번호를 규칙 기반으로 채점한다. 기본 점수 10에서 시작해서
-     * 위험 요소가 발견될 때마다 가중치를 더하고, 최종 점수는 [riskLevelLabel]로 등급화한다.
-     * 같은 입력이면 항상 같은 결과를 내는 순수 함수라서, [SmishingResultFragment]가
-     * [CheckRecord](message, sender)만 저장해두고 화면을 그릴 때마다 다시 호출해도 결과가 동일하다.
+     * 같은 입력과 데이터셋이면 항상 같은 결과를 내는 순수 채점 함수.
+     * URL은 단순 포함 여부와 KISA 데이터셋 정확 일치를 구분해 점수를 부여한다.
      */
-    fun analyze(message: String, sender: String): AnalysisResult {
+    fun analyze(
+        message: String,
+        sender: String,
+        knownPhishingUrls: Set<String> = emptySet(),
+        checkedRecordCount: Int = 0
+    ): AnalysisResult {
         val riskFactors = mutableListOf<RiskFactor>()
         var score = 10
+        val extractedUrls = KisaPhishingUrlDataset.extractUrls(message)
+        val matchedPublicDataUrls = extractedUrls.filter { rawUrl ->
+            KisaPhishingUrlDataset.normalize(rawUrl)?.let(knownPhishingUrls::contains) == true
+        }
 
-        if (urlPattern.containsMatchIn(message)) {
+        if (matchedPublicDataUrls.isNotEmpty()) {
             riskFactors += RiskFactor(
-                "악성 URL 포함",
-                "메시지 내 링크가 악성 사이트로 연결될 가능성이 높습니다.",
+                "KISA 피싱 URL 일치",
+                "한국인터넷진흥원 공공데이터의 피싱사이트 URL과 일치합니다. 링크를 열지 마세요.",
                 "높음"
             )
-            score += 40
+            score += 65
+        } else if (extractedUrls.isNotEmpty()) {
+            riskFactors += RiskFactor(
+                "URL 포함",
+                "공공데이터 목록과 일치하지 않아도 새로 생성된 피싱 링크일 수 있으니 주의하세요.",
+                "중간"
+            )
+            score += 35
         }
 
         val normalizedSender = sender.filter(Char::isDigit)
@@ -95,7 +124,12 @@ object SmishingAnalyzer {
             score += 25
         }
 
-        return AnalysisResult(score.coerceAtMost(100), riskFactors)
+        return AnalysisResult(
+            score = score.coerceAtMost(100),
+            riskFactors = riskFactors,
+            matchedPublicDataUrls = matchedPublicDataUrls,
+            checkedPublicDataRecords = checkedRecordCount
+        )
     }
 
     fun riskLevelLabel(score: Int): String = when {
@@ -113,8 +147,13 @@ object SmishingAnalyzer {
     )
 
     /** [SmishingCheckFragment]에서 "분석하기" 클릭 시 호출. 이력에 저장하고 결과 화면에 넘길 id를 반환한다. */
-    suspend fun saveCheck(context: Context, message: String, sender: String): Int {
-        val result = analyze(message, sender)
+    suspend fun saveCheck(
+        context: Context,
+        message: String,
+        sender: String,
+        analysisResult: AnalysisResult? = null
+    ): Int {
+        val result = analysisResult ?: analyze(context, message, sender)
         return AppDatabase.getInstance(context).smishingCheckDao().insert(
             SmishingCheckEntity(
                 message = message,

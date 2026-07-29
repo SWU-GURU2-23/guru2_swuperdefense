@@ -3,6 +3,8 @@ package com.adroid.guru2_swuperdefense
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -55,14 +57,22 @@ class SmishingResultFragment : Fragment() {
                 parentFragmentManager.popBackStack()
                 return@launch
             }
-            renderResult(view, record)
+            val result = SmishingAnalyzer.analyze(
+                context = requireContext(),
+                message = record.message,
+                sender = record.sender
+            )
+            renderResult(view, record, result)
         }
     }
 
-    private fun renderResult(view: View, record: SmishingAnalyzer.CheckRecord) {
+    private fun renderResult(
+        view: View,
+        record: SmishingAnalyzer.CheckRecord,
+        result: SmishingAnalyzer.AnalysisResult
+    ) {
         message = record.message
         sender = record.sender
-        val result = SmishingAnalyzer.analyze(message, sender)
         val badgeLabel = SmishingAnalyzer.riskLevelLabel(result.score)
 
         view.findViewById<TextView>(R.id.tvRiskScore).text = "${result.score}/100"
@@ -89,6 +99,28 @@ class SmishingResultFragment : Fragment() {
             result.riskFactors.forEachIndexed { index, factor ->
                 container.addView(buildRiskFactorCard(index + 1, factor))
             }
+        }
+
+        val matchCount = result.matchedPublicDataUrls.size
+        view.findViewById<TextView>(R.id.tvPublicDataStatus).apply {
+            text = "${"%,d".format(result.checkedPublicDataRecords)}건 대조 · 일치 ${matchCount}건"
+            setTextColor(
+                colorOf(if (matchCount > 0) R.color.danger_red else R.color.safe_green)
+            )
+        }
+        view.findViewById<TextView>(R.id.tvPublicDataDescription).text =
+            if (matchCount > 0) {
+                "입력한 문자 속 URL이 KISA 피싱사이트 탐지 이력과 일치합니다."
+            } else {
+                "KISA 공개 목록과 일치하는 URL은 없지만, 새로 생성된 링크까지 안전하다는 의미는 아닙니다."
+            }
+        view.findViewById<View>(R.id.btnPublicDataSource).setOnClickListener {
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse(KisaPhishingUrlDataset.SOURCE_URL)
+                )
+            )
         }
 
         view.findViewById<View>(R.id.btnBack).setOnClickListener {

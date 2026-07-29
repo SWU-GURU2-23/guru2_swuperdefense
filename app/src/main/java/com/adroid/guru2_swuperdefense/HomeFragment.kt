@@ -232,7 +232,11 @@ class HomeFragment : Fragment() {
                     statusView.text = if (latest == null) {
                         "검사 기록 없음"
                     } else {
-                        val result = SmishingAnalyzer.analyze(latest.message, latest.sender)
+                        val result = SmishingAnalyzer.analyze(
+                            requireContext(),
+                            latest.message,
+                            latest.sender
+                        )
                         "최근 결과: ${SmishingAnalyzer.riskLevelLabel(result.score)}"
                     }
                 }

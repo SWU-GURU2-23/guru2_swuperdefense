@@ -56,17 +56,22 @@ class SmishingCheckFragment : Fragment() {
 
             val sender = etSender.text.toString()
 
-            val result = SmishingAnalyzer.analyze(message, sender)
             val analyzeButton = view.findViewById<View>(R.id.btnAnalyze)
             analyzeButton.isEnabled = false
             tvError.visibility = TextView.GONE
 
             viewLifecycleOwner.lifecycleScope.launch {
                 runCatching {
+                    val result = SmishingAnalyzer.analyze(
+                        context = requireContext(),
+                        message = message,
+                        sender = sender
+                    )
                     val checkId = SmishingAnalyzer.saveCheck(
                         requireContext(),
                         message,
-                        sender
+                        sender,
+                        result
                     )
                     ActivityLog.log(
                         context = requireContext(),

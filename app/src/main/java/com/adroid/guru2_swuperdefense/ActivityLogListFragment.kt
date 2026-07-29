@@ -7,6 +7,11 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 /** 홈 화면 "전체 보기"에서 진입하는 전체 활동 목록 화면 */
 class ActivityLogListFragment : Fragment() {
@@ -30,18 +35,29 @@ class ActivityLogListFragment : Fragment() {
             parentFragmentManager.popBackStack()
         }
 
-        val entries = ActivityLog.all()
         val container = view.findViewById<LinearLayout>(R.id.activityListContainer)
         val tvEmpty = view.findViewById<TextView>(R.id.tvActivityListEmpty)
 
-        tvEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ActivityLog.observeAll(requireContext()).collectLatest { entries ->
+                    container.removeAllViews()
+                    tvEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
 
-        entries.forEach { entry ->
-            val card = ActivityLog.buildCard(requireContext(), entry)
-            card.setOnClickListener {
-                ActivityLog.navigateTo(requireContext(), parentFragmentManager, R.id.fragmentContainer, entry)
+                    entries.forEach { entry ->
+                        val card = ActivityLog.buildCard(requireContext(), entry)
+                        card.setOnClickListener {
+                            ActivityLog.navigateTo(
+                                requireContext(),
+                                parentFragmentManager,
+                                R.id.fragmentContainer,
+                                entry
+                            )
+                        }
+                        container.addView(card)
+                    }
+                }
             }
-            container.addView(card)
         }
     }
 }

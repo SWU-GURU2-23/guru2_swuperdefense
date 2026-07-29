@@ -10,8 +10,11 @@
     <style name="Theme.GURU2SwuperDefense" parent="Base.Theme.GURU2SwuperDefense" />
 
     <style name="Theme.GURU2SwuperDefense.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/app_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <!-- Android 12 이상이 강제로 표시하는 시스템 Splash에는 로고를 그리지 않는다.
+             검은 전환 화면 직후 activity_splash의 빛나는 전체 화면만 사용자에게 보인다. -->
+        <item name="windowSplashScreenBackground">@android:color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_transparent</item>
+        <item name="windowSplashScreenAnimationDuration">0</item>
         <item name="postSplashScreenTheme">@style/Theme.GURU2SwuperDefense</item>
     </style>
 </resources>

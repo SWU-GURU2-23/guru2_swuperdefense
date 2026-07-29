@@ -126,7 +126,7 @@
                     android:background="@color/card_border" />
 
                 <LinearLayout
-                    android:id="@+id/rowSettings"
+                    android:id="@+id/rowScrappedPosts"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:clickable="true"
@@ -139,7 +139,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="설정"
+                        android:text="스크랩한 게시글"
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 

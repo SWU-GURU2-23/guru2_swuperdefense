@@ -3,19 +3,23 @@ package com.adroid.guru2_swuperdefense
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.adroid.guru2_swuperdefense.data.repository.AuthRepository
 
 /**
  * 계정 정보 화면: 아이디 표시(비밀번호는 실제 값 없이 "••••••••"로 항상 마스킹),
  * "비밀번호 수정" → [ChangePasswordFragment]로 이동,
- * "회원탈퇴" → 인증 연동 전에는 로컬 로그인 정보만 삭제 후 [LoginActivity]로 이동.
+ * "회원탈퇴" → 현재 비밀번호 재인증 후 Firebase 계정과 사용자 문서를 삭제.
  */
 class AccountFragment : Fragment() {
+    private val authRepository = AuthRepository.instance
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,21 +53,35 @@ class AccountFragment : Fragment() {
         }
 
         view.findViewById<View>(R.id.btnWithdraw).setOnClickListener {
+            val passwordInput = EditText(requireContext()).apply {
+                hint = "현재 비밀번호"
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                setPadding(48, 24, 48, 24)
+            }
             AlertDialog.Builder(requireContext())
                 .setTitle("회원 탈퇴")
-                .setMessage(
-                    "현재 개발 버전에는 서버 계정이 없어 로컬 로그인 정보만 삭제됩니다. 계속하시겠습니까?"
-                )
-                .setPositiveButton("정보 삭제") { _, _ ->
-                    // TODO: 백엔드 연동 지점 - 인증 서버의 계정과 사용자 데이터를 먼저 삭제
-                    AppSession.clearLocalAccount(requireContext())
-                    Toast.makeText(
-                        requireContext(),
-                        "개발용 로컬 계정 정보를 삭제했습니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    startActivity(Intent(requireContext(), LoginActivity::class.java))
-                    requireActivity().finish()
+                .setMessage("탈퇴하려면 현재 비밀번호를 입력해주세요. 기기에 저장한 증거 파일은 클라우드에 업로드되지 않습니다.")
+                .setView(passwordInput)
+                .setPositiveButton("계정 삭제") { _, _ ->
+                    val password = passwordInput.text.toString()
+                    if (password.isBlank()) {
+                        Toast.makeText(requireContext(), "현재 비밀번호를 입력해주세요.", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
+                    authRepository.deleteAccount(password)
+                        .addOnSuccessListener {
+                            AppSession.clearLocalAccount(requireContext())
+                            Toast.makeText(requireContext(), "계정을 삭제했습니다.", Toast.LENGTH_SHORT).show()
+                            startActivity(Intent(requireContext(), LoginActivity::class.java))
+                            requireActivity().finish()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(
+                                requireContext(),
+                                "계정을 삭제하지 못했습니다. 비밀번호를 확인해주세요.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                 }
                 .setNegativeButton("아니오", null)
                 .show()

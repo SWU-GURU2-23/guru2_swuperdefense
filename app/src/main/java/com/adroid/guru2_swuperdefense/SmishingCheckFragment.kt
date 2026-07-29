@@ -7,6 +7,8 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 /**
  * 스미싱 문구 점검 입력 화면. 문구(필수)와 발신번호(선택)를 입력받는다.
@@ -54,25 +56,42 @@ class SmishingCheckFragment : Fragment() {
 
             val sender = etSender.text.toString()
 
-            // TODO: 백엔드 연동 지점 - 분석 이력을 SmishingCheckDao로 저장하는 자리 (지금은 메모리 이력)
-            val checkId = SmishingAnalyzer.saveCheck(message, sender)
             val result = SmishingAnalyzer.analyze(message, sender)
-            ActivityLog.log(
-                icon = "🛡",
-                title = "스미싱 문구 점검",
-                description = "${SmishingAnalyzer.riskLevelLabel(result.score)}으로 분류됨",
-                type = ActivityLog.Type.SMISHING_CHECK,
-                refId = checkId
-            )
+            val analyzeButton = view.findViewById<View>(R.id.btnAnalyze)
+            analyzeButton.isEnabled = false
+            tvError.visibility = TextView.GONE
 
-            parentFragmentManager
-                .beginTransaction()
-                .replace(
-                    R.id.fragmentContainer,
-                    SmishingResultFragment.newInstance(checkId)
-                )
-                .addToBackStack(null)
-                .commit()
+            viewLifecycleOwner.lifecycleScope.launch {
+                runCatching {
+                    val checkId = SmishingAnalyzer.saveCheck(
+                        requireContext(),
+                        message,
+                        sender
+                    )
+                    ActivityLog.log(
+                        context = requireContext(),
+                        icon = "🛡",
+                        title = "스미싱 문구 점검",
+                        description = "${SmishingAnalyzer.riskLevelLabel(result.score)}으로 분류됨",
+                        type = ActivityLog.Type.SMISHING_CHECK,
+                        refId = checkId
+                    )
+                    checkId
+                }.onSuccess { checkId ->
+                    parentFragmentManager
+                        .beginTransaction()
+                        .replace(
+                            R.id.fragmentContainer,
+                            SmishingResultFragment.newInstance(checkId)
+                        )
+                        .addToBackStack(null)
+                        .commit()
+                }.onFailure {
+                    analyzeButton.isEnabled = true
+                    tvError.text = "검사 결과를 저장하지 못했습니다. 다시 시도해주세요."
+                    tvError.visibility = TextView.VISIBLE
+                }
+            }
         }
     }
 }

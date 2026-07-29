@@ -139,6 +139,16 @@
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary" />
 
+        <CheckBox
+            android:id="@+id/cbAnonymousPost"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:buttonTint="@color/orange_primary"
+            android:text="익명으로 게시"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
         <TextView
             android:id="@+id/tvWriteError"
             android:layout_width="match_parent"

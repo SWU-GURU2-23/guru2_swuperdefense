@@ -15,19 +15,22 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.adroid.guru2_swuperdefense.data.remote.model.BoardPostDto
+import com.adroid.guru2_swuperdefense.data.repository.AuthRepository
+import com.adroid.guru2_swuperdefense.data.repository.BoardRepository
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import java.util.concurrent.TimeUnit
 
 /**
  * 게시판 목록 화면.
  *
  * 책임: 게시글 목록 표시, 검색어/카테고리 필터링, 글쓰기 화면 진입.
- * 이 클래스가 게시판 도메인의 데이터 모델([Post], [Comment])과 저장소([Companion])를
- * 함께 들고 있어서, 다른 화면([WritePostFragment], [PostDetailFragment])은
- * 전부 이 클래스의 companion object 함수(addPost/getPostById/updatePost/deletePost)를
- * 통해서만 데이터에 접근한다 (직접 리스트를 만지지 않음).
+ * Firestore의 [BoardRepository] 실시간 목록을 화면 모델로 변환해 표시한다.
  *
  * 화면 흐름:
  *   BoardFragment --(+ 버튼)--> WritePostFragment (새 글)
@@ -44,11 +47,13 @@ class BoardFragment : Fragment() {
         val timeAgo: String
     )
 
-    // ==== 추가 수정: 수정/삭제 권한 판단을 위해 isMine 필드 추가.
-    //     실제 로그인 연동 전이라, 지금은 이 앱에서 직접 작성한 글만 true로 표시함.
-    //     TODO: 백엔드 연동 지점 - currentUserId == post.authorId 비교로 교체
+    // 작성자 UID와 현재 Firebase UID를 비교한 결과를 isMine으로 유지한다.
     data class Post(
+        val documentId: String,
         val id: Int,
+        val authorUid: String,
+        val authorName: String,
+        val isAnonymous: Boolean,
         val tag: String,
         val tagColor: Int,
         val title: String,
@@ -62,78 +67,54 @@ class BoardFragment : Fragment() {
         var isNew: Boolean = false,
         var likeCount: Int = 0,
         val comments: MutableList<Comment> = mutableListOf(),
-        val isMine: Boolean = false,
+        val isMine: Boolean,
         var hasLiked: Boolean = false,
-        var isScrapped: Boolean = false
+        var isScrapped: Boolean = false,
+        val isPinnedNotice: Boolean = false
     ) {
         /** 게시판 목록 카드에 표시할 "조회 n   댓글 n   · 시간" 형태 문자열 */
         fun metaText(): String {
+            if (isPinnedNotice) return ""
             val base = "조회 ${"%,d".format(viewCount)}     댓글 $commentCount"
             return if (timeAgo.isBlank()) base else "$base     · $timeAgo"
         }
     }
     // ==== 수정 끝 ====
 
-    // ==== 수정 시작: 글쓰기 기능 추가를 위해 posts를 인스턴스 속성 → companion object의 mutableList로 변경.
-    // Fragment는 화면 전환마다 새로 생성되므로, 작성한 글이 유지되려면 companion object(앱 프로세스 생존 동안 유지)에 둬야 함.
     companion object {
-        private var nextId = 0
-
-        // TODO: 백엔드 연동 지점 - BoardDao.getAllPosts()/insertPost()로 교체. 지금은 메모리 내 샘플 데이터.
-        private val posts = mutableListOf(
-            Post(nextId++, "공지", 0xFFFF7A00.toInt(), "[공지] 의심스러운 전화·문자 번호 공유 부탁드립니다",
-                "최근 다양한 수법의 스미싱과 보이스피싱이 증가하고 있습니다.", 3421, 42, "", "공지",
-                "📌", 0xFFFF7A00.toInt()),
-            Post(nextId++, "스미싱", 0xFFFF7A00.toInt(), "이런 검찰 번호로 전화가 왔어요",
-                "010-1234-5678 이 번호로 검찰이라고 하면서 연락이 왔습니다.", 134, 1, "10분 전", "피싱/스미싱",
-                "김", 0xFFFF7A00.toInt(), isNew = true,
-                comments = mutableListOf(Comment("박", "저도 같은 번호로 왔어요! 조심하세요.", "6분 전"))),
-            Post(nextId++, "피싱", 0xFF5B9DFF.toInt(), "저도 같은 번호로 왔어요!",
-                "검찰청 사칭이었어요. 모두 조심하세요!", 58, 3, "20분 전", "피싱/스미싱",
-                "박", 0xFF5B9DFF.toInt()),
-            Post(nextId++, "계정 도용", 0xFF58C36A.toInt(), "인스타그램 계정이 해킹당했어요",
-                "비밀번호가 변경됐다는 메일을 받았는데 로그인이 안 됩니다.", 87, 9, "2시간 전", "계정 도용",
-                "정", 0xFF58C36A.toInt()),
-            Post(nextId++, "금전 사기", 0xFFD97CF5.toInt(), "중고거래 사기를 당했어요",
-                "입금 후 판매자와 연락이 끊겼습니다. 신고 절차가 궁금해요.", 41, 5, "5시간 전", "금전 사기",
-                "최", 0xFFD97CF5.toInt()),
-            Post(nextId++, "보이스피싱", 0xFFFF7A00.toInt(), "저도 당했습니다.. ㅠㅠ",
-                "'경찰입니다' 하고 개인정보를 요구해서 일부 알려줬어요.", 192, 15, "3시간 전", "보이스피싱",
-                "이", 0xFF9B7CF5.toInt())
+        private const val PINNED_NOTICE_ID = Int.MIN_VALUE
+        private val pinnedNotice = Post(
+            documentId = "__pinned_notice__",
+            id = PINNED_NOTICE_ID,
+            authorUid = "",
+            authorName = "SWU퍼디펜스",
+            isAnonymous = false,
+            tag = "공지",
+            tagColor = 0xFFFF7A00.toInt(),
+            title = "[공지] 의심스러운 전화·문자 번호 공유 부탁드립니다",
+            body = "최근 다양한 수법의 스미싱과 보이스피싱이 증가하고 있습니다.",
+            viewCount = 0,
+            commentCount = 0,
+            timeAgo = "",
+            category = "공지",
+            authorInitial = "📌",
+            authorColor = 0xFFFF7A00.toInt(),
+            isMine = false,
+            isPinnedNotice = true
         )
+        private val posts = mutableListOf<Post>()
 
-        /** WritePostFragment에서 새 글 등록 시 호출. 목록 맨 위에 추가됨. */
-        fun addPost(post: Post) {
-            val saved = post.copy(id = nextId++)
-            posts.add(0, saved)
-            // ==== 추가: 최근활동에 게시글 작성 기록 남기기 ====
-            ActivityLog.log(
-                icon = "💬",
-                title = "게시글 작성",
-                description = saved.title,
-                type = ActivityLog.Type.BOARD_POST,
-                refId = saved.id
-            )
+        fun getPostById(id: Int): Post? =
+            if (id == PINNED_NOTICE_ID) pinnedNotice else posts.find { it.id == id }
+
+        fun cachePost(post: Post) {
+            posts.removeAll { it.id == post.id }
+            posts.add(post)
         }
 
-        fun getPostById(id: Int): Post? = posts.find { it.id == id }
-
-        /** 본인 글 수정. WritePostFragment 수정 모드에서 호출 */
-        fun updatePost(id: Int, title: String, body: String, category: String) {
-            val index = posts.indexOfFirst { it.id == id }
-            if (index == -1) return
-            posts[index] = posts[index].copy(
-                title = title,
-                body = body,
-                category = category,
-                tag = category,
-                tagColor = categoryTagColor(category)
-            )
-        }
-
-        /** 본인 글 삭제. PostDetailFragment 삭제 버튼에서 호출 */
-        fun deletePost(id: Int) {
-            posts.removeAll { it.id == id }
+        private fun replacePosts(newPosts: List<Post>) {
+            posts.clear()
+            posts.addAll(newPosts)
         }
 
         fun categoryTagColor(category: String): Int = when (category) {
@@ -143,15 +124,65 @@ class BoardFragment : Fragment() {
             "보이스피싱" -> 0xFF9B7CF5.toInt()
             else -> 0xFF5B9DFF.toInt()
         }
-    }
-    // ==== 수정 끝 ====
 
+        fun toUiPost(remote: BoardPostDto): Post {
+            val currentUid = AuthRepository.instance.currentUser?.uid
+            val authorName =
+                if (remote.isAnonymous) "익명" else remote.authorDisplayName.ifBlank { "사용자" }
+            return Post(
+                documentId = remote.documentId,
+                id = remote.localId,
+                authorUid = remote.authorUid,
+                authorName = authorName,
+                isAnonymous = remote.isAnonymous,
+                tag = remote.category,
+                tagColor = categoryTagColor(remote.category),
+                title = remote.title,
+                body = remote.body,
+                viewCount = remote.viewCount.toInt(),
+                commentCount = remote.commentCount.toInt(),
+                timeAgo = timeAgo(remote.createdAt?.toDate()?.time),
+                category = remote.category,
+                authorInitial = if (remote.isAnonymous) "익" else authorName.take(1),
+                authorColor = if (remote.isAnonymous) 0xFF6B6B6B.toInt() else avatarColor(remote.authorUid),
+                isNew = true,
+                likeCount = remote.likeCount.toInt(),
+                isMine = remote.authorUid == currentUid
+            )
+        }
+
+        private fun avatarColor(authorUid: String): Int {
+            val colors = intArrayOf(
+                0xFFFF7A00.toInt(),
+                0xFF5B9DFF.toInt(),
+                0xFF58C36A.toInt(),
+                0xFF9B7CF5.toInt(),
+                0xFFD97CF5.toInt()
+            )
+            return colors[(authorUid.hashCode() and Int.MAX_VALUE) % colors.size]
+        }
+
+        private fun timeAgo(timestamp: Long?): String {
+            if (timestamp == null) return "방금 전"
+            val minutes = TimeUnit.MILLISECONDS.toMinutes(
+                (System.currentTimeMillis() - timestamp).coerceAtLeast(0)
+            )
+            return when {
+                minutes < 1 -> "방금 전"
+                minutes < 60 -> "${minutes}분 전"
+                minutes < 24 * 60 -> "${minutes / 60}시간 전"
+                else -> "${minutes / (24 * 60)}일 전"
+            }
+        }
+    }
     private var selectedCategory: String = "전체"
     private var searchKeyword: String = ""
+    private var postListener: ListenerRegistration? = null
 
     private lateinit var postContainer: LinearLayout
     private lateinit var tvEmptyState: TextView
     private lateinit var categoryChips: List<MaterialButton>
+    private val repository = BoardRepository.instance
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -208,7 +239,6 @@ class BoardFragment : Fragment() {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        // ==== 수정 시작: 글쓰기 화면으로 이동 (기존: Toast 스텁) ====
         view.findViewById<View>(R.id.btnWrite).setOnClickListener {
             parentFragmentManager
                 .beginTransaction()
@@ -216,9 +246,39 @@ class BoardFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
-        // ==== 수정 끝 ====
 
+        // 네트워크 상태와 관계없이 앱 이용 공지는 항상 먼저 보여준다.
         renderList()
+        observePosts()
+    }
+
+    private fun observePosts() {
+        postListener?.remove()
+        postListener = repository.observePosts(
+            onChanged = { remotePosts ->
+                if (!isAdded) return@observePosts
+                replacePosts(remotePosts.map(::toUiPost))
+                renderList()
+                loadUserStates()
+            },
+            onError = {
+                if (!isAdded) return@observePosts
+                renderList()
+                Toast.makeText(requireContext(), "게시판 연결을 확인해주세요.", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    private fun loadUserStates() {
+        posts.forEach { post ->
+            repository.getUserPostState(post.documentId)
+                .addOnSuccessListener { state ->
+                    post.hasLiked = state.hasLiked
+                    post.isScrapped = state.isScrapped
+                    post.isNew = !state.hasRead
+                    if (isAdded && view != null) renderList()
+                }
+        }
     }
 
     private fun updateChipStyles(selected: MaterialButton) {
@@ -240,9 +300,8 @@ class BoardFragment : Fragment() {
     private fun renderList() {
         postContainer.removeAllViews()
 
-        val filtered = posts.filter { post ->
+        val filtered = listOf(pinnedNotice) + posts.filter { post ->
             val matchesCategory = selectedCategory == "전체" ||
-                post.category == "공지" ||
                 post.category == selectedCategory
             val matchesSearch = searchKeyword.isBlank() ||
                 post.title.contains(searchKeyword, ignoreCase = true) ||
@@ -250,6 +309,7 @@ class BoardFragment : Fragment() {
             matchesCategory && matchesSearch
         }
 
+        tvEmptyState.text = "조건에 맞는 게시글이 없습니다."
         tvEmptyState.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
 
         filtered.forEach { post ->
@@ -360,29 +420,27 @@ class BoardFragment : Fragment() {
             setPadding(0, dp(9), 0, 0)
         })
 
-        column.addView(TextView(context).apply {
-            text = post.metaText()
-            setTextColor(colorOf(R.color.text_secondary))
-            textSize = 13f
-            setPadding(0, dp(12), 0, 0)
-        })
+        if (!post.isPinnedNotice) {
+            column.addView(TextView(context).apply {
+                text = post.metaText()
+                setTextColor(colorOf(R.color.text_secondary))
+                textSize = 13f
+                setPadding(0, dp(12), 0, 0)
+            })
+        }
 
         row.addView(avatar)
         row.addView(column)
         card.addView(row)
         // ==== 수정 끝 ====
 
-        // ==== 수정 시작: 게시글 상세 화면으로 이동 + 조회수 증가 (기존: Toast 스텁) ====
         card.setOnClickListener {
-            post.viewCount++
-            post.isNew = false
             parentFragmentManager
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, PostDetailFragment.newInstance(post.id))
                 .addToBackStack(null)
                 .commit()
         }
-        // ==== 수정 끝 ====
 
         return card
     }
@@ -390,4 +448,10 @@ class BoardFragment : Fragment() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun colorOf(colorRes: Int): Int = ContextCompat.getColor(requireContext(), colorRes)
+
+    override fun onDestroyView() {
+        postListener?.remove()
+        postListener = null
+        super.onDestroyView()
+    }
 }

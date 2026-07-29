@@ -9,7 +9,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.checkbox.MaterialCheckBox
+import kotlinx.coroutines.launch
 
 class ChecklistFragment : Fragment() {
 
@@ -102,36 +104,32 @@ class ChecklistFragment : Fragment() {
 
         ChecklistProgressStore.setActiveIncident(requireContext(), incidentType)
 
-        checkBoxes.forEachIndexed { index, checkBox ->
-            checkBox.text = checklist[index]
-
-            checkBox.isChecked = ChecklistProgressStore.isChecked(
-                requireContext(),
-                incidentType,
-                index
-            )
-
-            checkBox.setOnCheckedChangeListener { _, isChecked ->
-                ChecklistProgressStore.setChecked(
-                    requireContext(),
-                    incidentType,
-                    index,
-                    isChecked
-                )
-
-                updateProgress()
-
-                if (checkBoxes.all { it.isChecked }) {
-                    Toast.makeText(
-                        requireContext(),
-                        "모든 대응 항목을 완료했습니다.",
-                        Toast.LENGTH_SHORT
-                    ).show()
+        checkBoxes.forEachIndexed { index, checkBox -> checkBox.text = checklist[index] }
+        viewLifecycleOwner.lifecycleScope.launch {
+            val states = ChecklistProgressStore.states(requireContext(), incidentType)
+            checkBoxes.forEachIndexed { index, checkBox ->
+                checkBox.isChecked = states[index]
+                checkBox.setOnCheckedChangeListener { _, isChecked ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        ChecklistProgressStore.setChecked(
+                            requireContext(),
+                            incidentType,
+                            index,
+                            isChecked
+                        )
+                    }
+                    updateProgress()
+                    if (checkBoxes.all { it.isChecked }) {
+                        Toast.makeText(
+                            requireContext(),
+                            "모든 대응 항목을 완료했습니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
+            updateProgress()
         }
-
-        updateProgress()
 
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
             parentFragmentManager.popBackStack()
@@ -164,18 +162,18 @@ class ChecklistFragment : Fragment() {
     }
 
     private fun resetChecklist() {
-        ChecklistProgressStore.reset(requireContext(), incidentType)
-        checkBoxes.forEach { checkBox ->
-            checkBox.isChecked = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            ChecklistProgressStore.reset(requireContext(), incidentType)
+            checkBoxes.forEach { checkBox ->
+                checkBox.isChecked = false
+            }
+            updateProgress()
+            Toast.makeText(
+                requireContext(),
+                "체크리스트를 초기화했습니다.",
+                Toast.LENGTH_SHORT
+            ).show()
         }
-
-        updateProgress()
-
-        Toast.makeText(
-            requireContext(),
-            "체크리스트를 초기화했습니다.",
-            Toast.LENGTH_SHORT
-        ).show()
     }
 
     private fun defaultChecklist(): List<String> {

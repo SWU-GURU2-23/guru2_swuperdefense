@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "352101085771",
+    "project_id": "swuper-defense-guru2",
+    "storage_bucket": "swuper-defense-guru2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:352101085771:android:0789f2bc1b06cdfe1f93ce",
+        "android_client_info": {
+          "package_name": "com.adroid.guru2_swuperdefense"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJuuuOe1kwuF0euKBGUYC5r0cvwhX273A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

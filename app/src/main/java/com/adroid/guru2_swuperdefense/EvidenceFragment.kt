@@ -11,19 +11,29 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.adroid.guru2_swuperdefense.data.local.EvidenceFileStore
+import com.adroid.guru2_swuperdefense.data.local.entity.EvidenceEntity
+import com.adroid.guru2_swuperdefense.data.repository.EvidenceRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 증거 보관함 목록 화면.
  *
  * 책임: 증거 목록 표시, 타입("이미지"/"메모"/"파일")별 필터, 증거 추가 화면 진입.
- * [Evidence] 데이터 모델과 저장소를 이 클래스가 소유하며, 다른 화면([AddEvidenceFragment],
- * [EvidenceDetailFragment])은 companion object 함수(addEvidence/getEvidenceById/removeEvidence)를
- * 통해서만 접근한다.
+ * Room의 [EvidenceRepository]를 관찰해 앱을 종료했다가 다시 실행해도 목록을 유지한다.
  *
  * 화면 흐름:
  *   HomeFragment "증거 정리" 카드 또는 이 화면의 "+" 버튼 --> AddEvidenceFragment
@@ -31,9 +41,7 @@ import com.google.android.material.card.MaterialCardView
  */
 class EvidenceFragment : Fragment() {
 
-    // ==== 수정 시작: 증거 추가 기능을 위해 contentUri 필드 추가, evidenceList를 companion object의 mutableList로 변경.
-    // Fragment는 화면 전환마다 새로 생성되므로 추가한 증거가 유지되려면 companion object에 둬야 함.
-    // ==== 추가 수정: 상세보기/삭제 기능을 위해 id 필드 추가 ====
+    /** Room Entity를 화면 표시용 리소스와 문자열로 변환한 모델. */
     data class Evidence(
         val icon: String,
         val title: String,
@@ -47,50 +55,16 @@ class EvidenceFragment : Fragment() {
         val id: Int = 0
     )
 
-    companion object {
-        private var nextId = 0
-
-        // TODO: 백엔드 연동 지점 - EvidenceDao.getAllEvidence()/insertEvidence()로 교체. 지금은 메모리 내 샘플 데이터.
-        private val evidenceList: MutableList<Evidence> = mutableListOf(
-            Evidence("▧", "스미싱 문자", "배송 주소지 불일치로 인해 아래 링크를 통해 확인해 주세요.",
-                "2024.05.23 14:32", "위험", R.color.danger_red, R.drawable.bg_badge_danger, "메모"),
-            Evidence("▧", "피싱 사이트 스크린샷", "",
-                "2024.05.22 09:15", "위험", R.color.danger_red, R.drawable.bg_badge_danger, "이미지"),
-            Evidence("▷", "의심 전화 녹음", "02:18",
-                "2024.05.21 16:45", "주의", R.color.orange_primary, R.drawable.bg_badge_caution, "파일"),
-            Evidence("▧", "계좌 이체 내역", "",
-                "2024.05.20 11:03", "안전", R.color.safe_green, R.drawable.bg_badge_safe, "이미지")
-        ).mapIndexed { index, evidence -> evidence.copy(id = index) }.toMutableList().also { nextId = it.size }
-
-        /** AddEvidenceFragment에서 저장 시 호출. 목록 맨 위에 추가됨. */
-        fun addEvidence(evidence: Evidence) {
-            val saved = evidence.copy(id = nextId++)
-            evidenceList.add(0, saved)
-            // ==== 추가: 최근활동에 증거 저장 기록 남기기 ====
-            ActivityLog.log(
-                icon = "📁",
-                title = "증거 저장",
-                description = "${saved.title} 저장 완료",
-                type = ActivityLog.Type.EVIDENCE,
-                refId = saved.id
-            )
-        }
-
-        fun getEvidenceById(id: Int): Evidence? = evidenceList.find { it.id == id }
-
-        fun evidenceCount(): Int = evidenceList.size
-
-        /** EvidenceDetailFragment의 삭제 버튼에서 호출 */
-        fun removeEvidence(id: Int) {
-            evidenceList.removeAll { it.id == id }
-        }
-    }
-    // ==== 수정 끝 ====
-
     private var selectedType: String = "전체"
+    private var evidenceList: List<Evidence> = emptyList()
     private lateinit var evidenceContainer: LinearLayout
     private lateinit var tvEmptyState: TextView
+    private lateinit var tvStorageUsage: TextView
+    private lateinit var progressStorage: ProgressBar
     private lateinit var filterChips: List<MaterialButton>
+    private val repository by lazy {
+        EvidenceRepository.getInstance(requireContext())
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -109,6 +83,8 @@ class EvidenceFragment : Fragment() {
 
         evidenceContainer = view.findViewById(R.id.evidenceContainer)
         tvEmptyState = view.findViewById(R.id.tvEmptyState)
+        tvStorageUsage = view.findViewById(R.id.tvStorageUsage)
+        progressStorage = view.findViewById(R.id.progressStorage)
 
         val chipAll = view.findViewById<MaterialButton>(R.id.chipAll)
         val chipImage = view.findViewById<MaterialButton>(R.id.chipImage)
@@ -132,7 +108,6 @@ class EvidenceFragment : Fragment() {
             }
         }
 
-        // ==== 수정 시작: 증거 추가 화면으로 이동 (기존: Toast 스텁) ====
         view.findViewById<View>(R.id.btnAdd).setOnClickListener {
             parentFragmentManager
                 .beginTransaction()
@@ -140,16 +115,87 @@ class EvidenceFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
-        // ==== 수정 끝 ====
 
-        // ==== 수정 시작: 칩 라벨의 건수를 실제 evidenceList 기준으로 계산해서 표시 (기존: XML 고정값) ====
-        chipAll.text = "전체 ${evidenceList.size}"
-        chipImage.text = "이미지 ${evidenceList.count { it.type == "이미지" }}"
-        chipMessage.text = "메모 ${evidenceList.count { it.type == "메모" }}"
-        chipFile.text = "파일 ${evidenceList.count { it.type == "파일" }}"
-        // ==== 수정 끝 ====
+        observeEvidence()
+    }
 
-        renderList()
+    private fun observeEvidence() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                repository.observeAll().collectLatest { entities ->
+                    evidenceList = entities.map(::toUiModel)
+                    updateStorageUsage(entities)
+                    updateFilterCounts()
+                    renderList()
+                }
+            }
+        }
+    }
+
+    private fun toUiModel(entity: EvidenceEntity): Evidence {
+        val (badgeColor, badgeBackground) = when (entity.riskLevel) {
+            "위험" -> R.color.danger_red to R.drawable.bg_badge_danger
+            "안전" -> R.color.safe_green to R.drawable.bg_badge_safe
+            else -> R.color.orange_primary to R.drawable.bg_badge_caution
+        }
+        val icon = if (entity.mediaType == EvidenceRepository.MEDIA_TYPE_FILE) "▷" else "▧"
+        val subtitle = when {
+            entity.mediaType == EvidenceRepository.MEDIA_TYPE_TEXT -> entity.memo
+            !entity.originalFileName.isNullOrBlank() -> entity.originalFileName
+            else -> ""
+        }
+
+        return Evidence(
+            icon = icon,
+            title = entity.title,
+            subtitle = subtitle,
+            date = DATE_FORMAT.format(Date(entity.createdAt)),
+            badgeText = entity.riskLevel,
+            badgeColorRes = badgeColor,
+            badgeBgRes = badgeBackground,
+            type = entity.mediaType,
+            contentUri = repository.contentUriOf(entity),
+            id = entity.id
+        )
+    }
+
+    private fun updateFilterCounts() {
+        filterChips[0].text = "전체 ${evidenceList.size}"
+        filterChips[1].text = "이미지 ${evidenceList.count { it.type == EvidenceRepository.MEDIA_TYPE_IMAGE }}"
+        filterChips[2].text = "메모 ${evidenceList.count { it.type == EvidenceRepository.MEDIA_TYPE_TEXT }}"
+        filterChips[3].text = "파일 ${evidenceList.count { it.type == EvidenceRepository.MEDIA_TYPE_FILE }}"
+    }
+
+    private fun updateStorageUsage(entities: List<EvidenceEntity>) {
+        val fileBytes = EvidenceFileStore.totalBytes(requireContext())
+        val textBytes = entities.sumOf { entity ->
+            entity.title.toByteArray().size.toLong() +
+                entity.memo.toByteArray().size +
+                entity.originalFileName.orEmpty().toByteArray().size
+        }
+        val usedBytes = fileBytes + textBytes
+        val availableBytes = requireContext().filesDir.usableSpace.coerceAtLeast(0L)
+        val storageTotal = (usedBytes + availableBytes).coerceAtLeast(1L)
+        val percent = ((usedBytes.toDouble() / storageTotal) * 100)
+            .toInt()
+            .coerceIn(0, 100)
+
+        tvStorageUsage.text =
+            "로컬 사용 중  ${formatBytes(usedBytes)} · 기기 여유 ${formatBytes(availableBytes)}"
+        progressStorage.progress = percent
+    }
+
+    private fun formatBytes(bytes: Long): String {
+        if (bytes < 1024) return "${bytes}B"
+        val units = arrayOf("KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var unitIndex = -1
+        do {
+            value /= 1024.0
+            unitIndex++
+        } while (value >= 1024 && unitIndex < units.lastIndex)
+        val pattern = if (value >= 10) "%.1f%s" else "%.2f%s"
+        return pattern.format(Locale.KOREA, value, units[unitIndex])
     }
 
     private fun updateChipStyles(selected: MaterialButton) {
@@ -273,4 +319,8 @@ class EvidenceFragment : Fragment() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun colorOf(colorRes: Int): Int = ContextCompat.getColor(requireContext(), colorRes)
+
+    companion object {
+        private val DATE_FORMAT = SimpleDateFormat("yyyy.MM.dd HH:mm", Locale.KOREA)
+    }
 }

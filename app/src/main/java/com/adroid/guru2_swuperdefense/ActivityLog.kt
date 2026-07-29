@@ -8,10 +8,14 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
+import com.adroid.guru2_swuperdefense.data.local.AppDatabase
+import com.adroid.guru2_swuperdefense.data.local.entity.ActivityLogEntity
 import com.google.android.material.card.MaterialCardView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * 앱 전역 사용자 활동(스미싱 점검/증거 저장/게시글 작성) 기록.
@@ -20,7 +24,7 @@ import java.util.Locale
  * 이 객체 하나를 공용으로 조회한다. 카드 UI([buildCard])와 클릭 시 이동 로직([navigateTo])도
  * 여기 모아둬서 두 화면이 완전히 동일하게 동작한다.
  *
- * TODO: 백엔드 연동 지점 - ActivityLogDao로 교체. 지금은 앱 실행 중에만 유지되는 메모리 로그.
+ * 기록은 Room에 저장되어 앱을 종료해도 유지된다.
  */
 object ActivityLog {
 
@@ -37,32 +41,50 @@ object ActivityLog {
         val refId: Int
     )
 
-    private var nextId = 0
-    private val entries = mutableListOf<Entry>()
-
-    // ==== 추가: 데모/디자인 확인용 하드코딩 샘플 3개를 초기값으로 유지.
-    // 실제 활동이 쌓이면 시간순으로 자연스럽게 아래로 밀려남. 아직은 삭제하지 않음.
-    init {
-        val now = System.currentTimeMillis()
-        entries.add(Entry(nextId++, "🛡", "스미싱 URL 검사", "위험 URL 차단됨", now, Type.NONE, -1))
-        entries.add(Entry(nextId++, "📁", "증거 파일 저장", "증거 2건 저장 완료", now - 23 * 60 * 1000L, Type.NONE, -1))
-        entries.add(Entry(nextId++, "🏛", "금융기관 신고 완료", "신한은행", now - 60 * 60 * 1000L, Type.NONE, -1))
-    }
-
     /**
-     * 새 활동 1건 기록. 목록 맨 앞(최신순)에 추가된다.
-     * 호출 지점: [BoardFragment.addPost], [EvidenceFragment.addEvidence], [SmishingCheckFragment]의 분석 버튼.
+     * 새 활동 1건을 Room에 기록한다.
+     * 호출 지점: 게시글 작성, [AddEvidenceFragment] 저장 완료, [SmishingCheckFragment] 분석 버튼.
      * @param refId 해당 기능의 상세화면으로 이동할 때 쓸 id (Post.id / Evidence.id / CheckRecord.id)
      */
-    fun log(icon: String, title: String, description: String, type: Type, refId: Int) {
-        entries.add(0, Entry(nextId++, icon, title, description, System.currentTimeMillis(), type, refId))
+    suspend fun log(
+        context: Context,
+        icon: String,
+        title: String,
+        description: String,
+        type: Type,
+        refId: Int
+    ) {
+        AppDatabase.getInstance(context).activityLogDao().insert(
+            ActivityLogEntity(
+                icon = icon,
+                title = title,
+                description = description,
+                type = type.name,
+                referenceId = refId
+            )
+        )
     }
 
-    /** 홈 화면용: 최근 N개만 */
-    fun recent(limit: Int): List<Entry> = entries.take(limit)
+    /** 홈 화면용: 최근 N개를 실시간 관찰 */
+    fun observeRecent(context: Context, limit: Int): Flow<List<Entry>> =
+        AppDatabase.getInstance(context).activityLogDao().observeRecent(limit)
+            .map { entities -> entities.map(::toEntry) }
 
     /** 전체보기 화면용 */
-    fun all(): List<Entry> = entries.toList()
+    fun observeAll(context: Context): Flow<List<Entry>> =
+        AppDatabase.getInstance(context).activityLogDao().observeAll()
+            .map { entities -> entities.map(::toEntry) }
+
+    private fun toEntry(entity: ActivityLogEntity): Entry =
+        Entry(
+            id = entity.id,
+            icon = entity.icon,
+            title = entity.title,
+            description = entity.description,
+            timestamp = entity.timestamp,
+            type = runCatching { Type.valueOf(entity.type) }.getOrDefault(Type.NONE),
+            refId = entity.referenceId
+        )
 
     fun timeAgo(timestamp: Long): String {
         val minutes = (System.currentTimeMillis() - timestamp) / (60 * 1000)

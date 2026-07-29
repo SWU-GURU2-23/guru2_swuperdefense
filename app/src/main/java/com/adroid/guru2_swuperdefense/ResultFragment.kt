@@ -16,6 +16,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import com.adroid.guru2_swuperdefense.data.repository.DiagnosisHistoryRepository
+import kotlinx.coroutines.launch
 
 class ResultFragment : Fragment() {
 
@@ -47,8 +50,15 @@ class ResultFragment : Fragment() {
         riskScore = arguments?.getInt(ARG_RISK_SCORE) ?: 0
         hasCriticalFlag = arguments?.getBoolean(ARG_HAS_CRITICAL_FLAG) ?: false
 
-        // 홈 화면 SECURITY SCORE가 항상 "마지막 진단 결과"를 가리키도록 여기서 저장
-        DiagnosisSummaryStore.save(requireContext(), incidentType, riskScore, hasCriticalFlag)
+        if (savedInstanceState == null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                DiagnosisHistoryRepository.getInstance(requireContext()).save(
+                    incidentType = incidentType,
+                    riskScore = riskScore,
+                    hasCriticalFlag = hasCriticalFlag
+                )
+            }
+        }
         ChecklistProgressStore.setActiveIncident(requireContext(), incidentType)
 
         val riskLevel = DiagnosisSummaryStore.riskLevelLabel(riskScore, hasCriticalFlag)

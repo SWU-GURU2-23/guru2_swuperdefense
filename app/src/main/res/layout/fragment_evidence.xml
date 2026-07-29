@@ -47,7 +47,7 @@
                 android:id="@+id/tvStorageUsage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="사용 중  1.2GB / 5GB"
+                android:text="로컬 사용 중  0B"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -59,7 +59,7 @@
                 android:layout_height="8dp"
                 android:layout_marginTop="12dp"
                 android:max="100"
-                android:progress="24"
+                android:progress="0"
                 android:progressTint="@color/orange_primary" />
 
         </LinearLayout>

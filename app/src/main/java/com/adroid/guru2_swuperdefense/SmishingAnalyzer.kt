@@ -1,5 +1,11 @@
 package com.adroid.guru2_swuperdefense
 
+import android.content.Context
+import com.adroid.guru2_swuperdefense.data.local.AppDatabase
+import com.adroid.guru2_swuperdefense.data.local.entity.SmishingCheckEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
 /**
  * 스미싱 문구 간이 판별 로직.
  * TODO: 지금은 키워드 기반 규칙으로 동작함. 백엔드 담당자가 서버 API나 공공데이터
@@ -98,8 +104,7 @@ object SmishingAnalyzer {
         else -> "낮은 위험"
     }
 
-    // ==== 추가: 최근활동에서 과거 검사 결과로 다시 들어갈 수 있도록 검사 이력 보관 ====
-    // TODO: 백엔드 연동 지점 - SmishingCheckDao로 교체. 지금은 앱 실행 중에만 유지되는 메모리 이력.
+    // 최근 활동에서 과거 검사 결과를 다시 열 수 있도록 Room에 검사 이력을 보관한다.
     data class CheckRecord(
         val id: Int,
         val message: String,
@@ -107,17 +112,31 @@ object SmishingAnalyzer {
         val timestamp: Long
     )
 
-    private var nextCheckId = 0
-    private val checkHistory = mutableListOf<CheckRecord>()
-
     /** [SmishingCheckFragment]에서 "분석하기" 클릭 시 호출. 이력에 저장하고 결과 화면에 넘길 id를 반환한다. */
-    fun saveCheck(message: String, sender: String): Int {
-        val id = nextCheckId++
-        checkHistory.add(0, CheckRecord(id, message, sender, System.currentTimeMillis()))
-        return id
+    suspend fun saveCheck(context: Context, message: String, sender: String): Int {
+        val result = analyze(message, sender)
+        return AppDatabase.getInstance(context).smishingCheckDao().insert(
+            SmishingCheckEntity(
+                message = message,
+                sender = sender,
+                score = result.score,
+                riskLevel = riskLevelLabel(result.score)
+            )
+        ).toInt()
     }
 
-    fun getCheckById(id: Int): CheckRecord? = checkHistory.find { it.id == id }
+    suspend fun getCheckById(context: Context, id: Int): CheckRecord? =
+        AppDatabase.getInstance(context).smishingCheckDao().getById(id)?.toRecord()
 
-    fun latestCheck(): CheckRecord? = checkHistory.firstOrNull()
+    fun observeLatest(context: Context): Flow<CheckRecord?> =
+        AppDatabase.getInstance(context).smishingCheckDao().observeLatest()
+            .map { it?.toRecord() }
+
+    private fun SmishingCheckEntity.toRecord(): CheckRecord =
+        CheckRecord(
+            id = id,
+            message = message,
+            sender = sender,
+            timestamp = createdAt
+        )
 }

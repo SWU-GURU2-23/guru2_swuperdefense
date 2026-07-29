@@ -4,18 +4,22 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.adroid.guru2_swuperdefense.data.repository.BoardRepository
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.launch
 
 /**
  * 게시판 글쓰기/수정 화면. 한 화면을 두 모드로 재사용한다.
- * - 새 글 작성: [newInstance]로 진입 → editPostId 없음 → 저장 시 [BoardFragment.addPost] 호출
+ * - 새 글 작성: [newInstance]로 진입 → editPostId 없음 → Firestore 새 문서 저장
  * - 기존 글 수정: [newInstanceForEdit]로 진입 → editPostId 있음 → 화면 진입 시 기존 제목/내용/
- *   카테고리를 입력창에 미리 채워두고, 저장 시 [BoardFragment.updatePost] 호출
+ *   카테고리를 입력창에 미리 채워두고, 작성자 본인 문서를 수정
  *
  * 진입 경로: [BoardFragment]의 "+" 버튼(새 글) / [PostDetailFragment]의 "수정" 링크(본인 글만)
  */
@@ -24,6 +28,7 @@ class WritePostFragment : Fragment() {
     private var editPostId: Int? = null
     private var selectedCategory: String = "피싱/스미싱"
     private lateinit var categoryChips: List<MaterialButton>
+    private val repository = BoardRepository.instance
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -71,6 +76,7 @@ class WritePostFragment : Fragment() {
         val etBody = view.findViewById<EditText>(R.id.etPostBody)
         val tvError = view.findViewById<TextView>(R.id.tvWriteError)
         val tvHeader = view.findViewById<TextView>(R.id.tvWriteHeader)
+        val cbAnonymousPost = view.findViewById<CheckBox>(R.id.cbAnonymousPost)
         val btnSubmit = view.findViewById<MaterialButton>(R.id.btnSubmitPost)
 
         // ==== 수정 시작: 수정 모드일 때 기존 글 내용을 입력창에 미리 채워둠 ====
@@ -79,6 +85,7 @@ class WritePostFragment : Fragment() {
             btnSubmit.text = "수정하기"
             etTitle.setText(editingPost.title)
             etBody.setText(editingPost.body)
+            cbAnonymousPost.isChecked = editingPost.isAnonymous
             selectedCategory = editingPost.category
             val matchedChip = categoryOf.entries.find { it.value == editingPost.category }?.key
             if (matchedChip != null) updateChipStyles(matchedChip)
@@ -99,35 +106,66 @@ class WritePostFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // TODO: 백엔드 연동 지점 - BoardDao.insertPost()/updatePost()로 교체. 지금은 companion object 메모리 목록만 갱신.
             val currentEditId = editPostId
-            if (currentEditId != null) {
-                BoardFragment.updatePost(currentEditId, title, body, selectedCategory)
-                Toast.makeText(requireContext(), "게시글을 수정했습니다.", Toast.LENGTH_SHORT).show()
-            } else {
-                // id는 addPost()에서 실제 값으로 다시 부여하므로 여기선 임시값(0)만 넣음
-                BoardFragment.addPost(
-                    BoardFragment.Post(
-                        id = 0,
-                        tag = selectedCategory,
-                        tagColor = BoardFragment.categoryTagColor(selectedCategory),
-                        title = title,
-                        body = body,
-                        viewCount = 0,
-                        commentCount = 0,
-                        timeAgo = "방금 전",
-                        category = selectedCategory,
-                        authorInitial = "나",
-                        authorColor = colorOf(R.color.orange_primary),
-                        isNew = true,
-                        isMine = true
-                    )
-                )
-                Toast.makeText(requireContext(), "게시글이 등록되었습니다.", Toast.LENGTH_SHORT).show()
-            }
+            btnSubmit.isEnabled = false
+            btnSubmit.text = if (currentEditId != null) "수정 중..." else "등록 중..."
 
-            parentFragmentManager.popBackStack()
+            if (currentEditId != null) {
+                val post = BoardFragment.getPostById(currentEditId)
+                if (post == null || !post.isMine) {
+                    showSaveError(btnSubmit, tvError, "수정할 수 없는 게시글입니다.")
+                    return@setOnClickListener
+                }
+                repository.updatePost(
+                    documentId = post.documentId,
+                    category = selectedCategory,
+                    title = title.trim(),
+                    body = body.trim(),
+                    isAnonymous = cbAnonymousPost.isChecked
+                ).addOnSuccessListener {
+                    Toast.makeText(requireContext(), "게시글을 수정했습니다.", Toast.LENGTH_SHORT).show()
+                    parentFragmentManager.popBackStack()
+                }.addOnFailureListener {
+                    showSaveError(btnSubmit, tvError, saveErrorMessage("수정"))
+                }
+            } else {
+                repository.createPost(
+                    category = selectedCategory,
+                    title = title.trim(),
+                    body = body.trim(),
+                    isAnonymous = cbAnonymousPost.isChecked
+                ).addOnSuccessListener { document ->
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        ActivityLog.log(
+                            context = requireContext(),
+                            icon = "💬",
+                            title = "게시글 작성",
+                            description = title.trim(),
+                            type = ActivityLog.Type.BOARD_POST,
+                            refId = document.id.hashCode() and Int.MAX_VALUE
+                        )
+                        Toast.makeText(
+                            requireContext(),
+                            "게시글이 등록되었습니다.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        parentFragmentManager.popBackStack()
+                    }
+                }.addOnFailureListener {
+                    showSaveError(btnSubmit, tvError, saveErrorMessage("등록"))
+                }
+            }
         }
+    }
+
+    private fun saveErrorMessage(action: String): String =
+        "게시글을 ${action}하지 못했습니다. 네트워크 연결을 확인해주세요."
+
+    private fun showSaveError(button: MaterialButton, errorView: TextView, message: String) {
+        button.isEnabled = true
+        button.text = if (editPostId != null) "수정하기" else "등록하기"
+        errorView.text = message
+        errorView.visibility = TextView.VISIBLE
     }
 
     private fun updateChipStyles(selected: MaterialButton) {

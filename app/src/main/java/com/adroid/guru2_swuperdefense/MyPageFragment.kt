@@ -2,7 +2,7 @@ package com.adroid.guru2_swuperdefense
 
 // ============================================================================
 // 수정 안내: 원래 이 파일은 fragment_placeholder.xml을 재사용해 제목/안내문구만
-// 띄우는 화면이었음. res/layout/fragment_mypage.xml을 새로 만들고, 계정/설정/버전/
+// 띄우는 화면이었음. res/layout/fragment_mypage.xml을 새로 만들고, 계정/버전/
 // 로그아웃 메뉴 로직을 아래에 전부 추가함.
 // ============================================================================
 
@@ -14,15 +14,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 
 /**
- * 마이페이지 메뉴 화면: 계정 / 설정 / 버전 / 로그아웃 4개 항목.
+ * 마이페이지 메뉴 화면: 계정 / 스크랩한 게시글 / 버전 / 로그아웃.
  * - 계정 → [AccountFragment]로 이동
- * - 설정 → 아직 내용 미정이라 Toast 스텁만 (TODO)
+ * - 스크랩한 게시글 → [ScrappedPostsFragment]로 이동
  * - 버전 → PackageManager에서 실제 versionName을 읽어 다이얼로그로 표시
- * - 로그아웃 → 로컬 세션 종료 후 [LoginActivity]로 이동, 현재 액티비티 종료
+ * - 로그아웃 → Firebase 세션 종료 후 [LoginActivity]로 이동, 현재 액티비티 종료
  */
 class MyPageFragment : Fragment() {
 
@@ -55,9 +54,12 @@ class MyPageFragment : Fragment() {
                 .commit()
         }
 
-        view.findViewById<View>(R.id.rowSettings).setOnClickListener {
-            // TODO: 백엔드 연동 지점 - 알림/개인정보 등 설정 화면 연결 예정
-            Toast.makeText(requireContext(), "설정 기능은 추후 연동됩니다.", Toast.LENGTH_SHORT).show()
+        view.findViewById<View>(R.id.rowScrappedPosts).setOnClickListener {
+            parentFragmentManager
+                .beginTransaction()
+                .replace(R.id.fragmentContainer, ScrappedPostsFragment())
+                .addToBackStack(null)
+                .commit()
         }
 
         view.findViewById<View>(R.id.rowVersion).setOnClickListener {
@@ -73,7 +75,6 @@ class MyPageFragment : Fragment() {
                 .setTitle("로그아웃")
                 .setMessage("현재 계정에서 로그아웃하시겠습니까?")
                 .setPositiveButton("로그아웃") { _, _ ->
-                    // TODO: 백엔드 연동 지점 - 실제 인증 토큰도 함께 폐기
                     AppSession.logOut(requireContext())
                     startActivity(Intent(requireContext(), LoginActivity::class.java))
                     requireActivity().finish()

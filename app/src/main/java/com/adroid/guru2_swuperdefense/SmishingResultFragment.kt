@@ -12,8 +12,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.launch
 
 /**
  * 스미싱 점검 결과 화면. 메시지를 직접 받지 않고 **checkId**만 받아서
@@ -42,16 +44,24 @@ class SmishingResultFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val checkId = arguments?.getInt(ARG_CHECK_ID) ?: -1
-        val record = SmishingAnalyzer.getCheckById(checkId)
-
-        if (record == null) {
-            parentFragmentManager.popBackStack()
-            return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val record = SmishingAnalyzer.getCheckById(requireContext(), checkId)
+            if (record == null) {
+                Toast.makeText(
+                    requireContext(),
+                    "검사 기록을 찾을 수 없습니다.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                parentFragmentManager.popBackStack()
+                return@launch
+            }
+            renderResult(view, record)
         }
+    }
 
+    private fun renderResult(view: View, record: SmishingAnalyzer.CheckRecord) {
         message = record.message
         sender = record.sender
-
         val result = SmishingAnalyzer.analyze(message, sender)
         val badgeLabel = SmishingAnalyzer.riskLevelLabel(result.score)
 

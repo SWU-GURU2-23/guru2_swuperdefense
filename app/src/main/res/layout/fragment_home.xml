@@ -104,7 +104,7 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
-                    <!-- TODO: 백엔드 연동 지점 - 실제 점수는 진단/증거/체크리스트 이력 기반으로 계산되어 DB에서 조회될 예정. 지금은 샘플 값 -->
+                    <!-- 마지막 피해 진단 결과로 HomeFragment가 실제 값을 채움 -->
                     <TextView
                         android:id="@+id/tvSecurityScore"
                         android:layout_width="wrap_content"
@@ -129,13 +129,12 @@
                 </LinearLayout>
 
                 <FrameLayout
-                    android:layout_width="88dp"
-                    android:layout_height="88dp">
+                    android:layout_width="96dp"
+                    android:layout_height="96dp">
 
                     <!-- ==== 수정: 커스텀 ring 드로어블(bg_score_ring)이 progress 비율과 실제로
                     그려지는 호(arc) 길이가 어긋나는 문제가 있어, Material의 검증된
-                    CircularProgressIndicator로 교체 (기존: ProgressBar + progressDrawable) ====
-                    TODO: 백엔드 연동 지점 - progress 값을 tvSecurityScore와 동일한 실제 점수로 교체 -->
+                    CircularProgressIndicator로 교체 (기존: ProgressBar + progressDrawable) ==== -->
                     <!-- ==== 수정: android:indeterminate 기본값이 true라 progress를 줘도 계속
                     빙글빙글 도는 인디케이터로만 보이던 문제 - 명시적으로 false 지정 ==== -->
                     <com.google.android.material.progressindicator.CircularProgressIndicator
@@ -146,18 +145,20 @@
                         android:max="100"
                         android:progress="92"
                         app:indicatorColor="@color/orange_primary"
-                        app:indicatorSize="84dp"
+                        app:indicatorSize="92dp"
                         app:trackColor="@color/card_border"
                         app:trackCornerRadius="5dp"
                         app:trackThickness="9dp" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
                         android:text="🛡"
                         android:textColor="@color/orange_primary"
-                        android:textSize="26sp" />
+                        android:textSize="26sp"
+                        android:translationX="1.5dp" />
 
                 </FrameLayout>
 
@@ -392,13 +393,13 @@
                         android:textSize="12sp" />
                     <!-- ==== 수정 끝 ==== -->
 
-                    <!-- TODO: 백엔드 연동 지점 - EvidenceDao로 실제 저장 건수 조회 예정 -->
+                    <!-- EvidenceRepository의 Room 저장 건수를 HomeFragment에서 실시간 표시 -->
                     <TextView
                         android:id="@+id/tvEvidenceCount"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="28 건"
+                        android:text="0개 보관 중"
                         android:textColor="@color/orange_primary"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -472,7 +473,7 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
-                    <!-- TODO: 백엔드 연동 지점 - SmishingCheckDao의 최근 검사 결과로 상태/색상 교체 -->
+                    <!-- Room SmishingCheckDao의 최근 검사 결과로 HomeFragment가 값을 채움 -->
                     <TextView
                         android:id="@+id/tvSmishingStatus"
                         android:layout_width="match_parent"

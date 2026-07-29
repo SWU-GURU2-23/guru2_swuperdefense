@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+          .data.isAdmin == true;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.isAdmin != true;
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin']);
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.authorUid == request.auth.uid;
+
+      // 조회수·댓글 수·공감 수 갱신을 위해 로그인 사용자의 update는 허용하되,
+      // 작성자 UID 자체를 다른 사람으로 바꾸는 것은 막는다.
+      allow update: if signedIn()
+        && request.resource.data.authorUid == resource.data.authorUid;
+      allow delete: if signedIn()
+        && (resource.data.authorUid == request.auth.uid || isAdmin());
+
+      // 수업용 테스트 범위에서는 댓글·공감·스크랩·읽음 데이터를 로그인 사용자에게 허용한다.
+      match /{subCollection}/{documentId} {
+        allow read, write: if signedIn();
+      }
+    }
+  }
+}

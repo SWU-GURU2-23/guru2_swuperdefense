@@ -56,7 +56,8 @@
             android:background="@drawable/bg_input_field"
             android:drawableStart="@drawable/ic_person_outline"
             android:drawablePadding="10dp"
-            android:hint="이메일 또는 아이디"
+            android:hint="아이디"
+            android:inputType="text"
             android:singleLine="true"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/text_secondary" />
@@ -101,21 +102,12 @@
 
             <CheckBox
                 android:id="@+id/cbRememberId"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:buttonTint="@color/orange_primary"
                 android:text="아이디 저장"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
-
-            <TextView
-                android:id="@+id/tvFindPassword"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="비밀번호 찾기"
-                android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
 
         </LinearLayout>
 

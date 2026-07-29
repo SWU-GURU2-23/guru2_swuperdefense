@@ -1,10 +1,14 @@
 package com.adroid.guru2_swuperdefense
 
 import android.content.Context
+import com.adroid.guru2_swuperdefense.data.local.AppDatabase
+import com.adroid.guru2_swuperdefense.data.local.entity.ChecklistProgressEntity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /**
- * Room 연동 전 체크리스트 진행 상태를 한 곳에서 읽고 쓰는 저장소.
- * Fragment와 홈 화면이 같은 키 규칙을 공유하도록 캡슐화한다.
+ * 체크리스트 진행 상태를 Room에 저장한다. 활성 피해 유형 이름만 작은 화면 상태이므로
+ * SharedPreferences에 두고, 기존 버전의 체크 여부는 최초 조회 때 Room으로 이전한다.
  */
 object ChecklistProgressStore {
     private const val PREF_NAME = "checklist_preferences"
@@ -20,23 +24,57 @@ object ChecklistProgressStore {
     fun activeIncident(context: Context): String? =
         preferences(context).getString(KEY_ACTIVE_INCIDENT, null)
 
-    fun isChecked(context: Context, incidentType: String, index: Int): Boolean =
-        preferences(context).getBoolean(stepKey(incidentType, index), false)
-
-    fun setChecked(context: Context, incidentType: String, index: Int, checked: Boolean) {
-        preferences(context).edit()
-            .putBoolean(stepKey(incidentType, index), checked)
-            .apply()
+    suspend fun states(context: Context, incidentType: String): List<Boolean> {
+        val dao = AppDatabase.getInstance(context).checklistProgressDao()
+        var rows = dao.getForIncident(incidentType)
+        if (rows.isEmpty()) {
+            val prefs = preferences(context)
+            val legacyRows = (0 until STEP_COUNT).mapNotNull { index ->
+                val key = stepKey(incidentType, index)
+                if (!prefs.contains(key)) {
+                    null
+                } else {
+                    ChecklistProgressEntity(
+                        incidentType = incidentType,
+                        stepIndex = index,
+                        completed = prefs.getBoolean(key, false)
+                    )
+                }
+            }
+            legacyRows.forEach { dao.upsert(it) }
+            rows = dao.getForIncident(incidentType)
+        }
+        val byIndex = rows.associateBy(ChecklistProgressEntity::stepIndex)
+        return (0 until STEP_COUNT).map { byIndex[it]?.completed ?: false }
     }
 
-    fun completedCount(context: Context, incidentType: String): Int =
-        (0 until STEP_COUNT).count { isChecked(context, incidentType, it) }
+    suspend fun setChecked(
+        context: Context,
+        incidentType: String,
+        index: Int,
+        checked: Boolean
+    ) {
+        AppDatabase.getInstance(context).checklistProgressDao().upsert(
+            ChecklistProgressEntity(
+                incidentType = incidentType,
+                stepIndex = index,
+                completed = checked
+            )
+        )
+    }
 
-    fun reset(context: Context, incidentType: String) {
-        val editor = preferences(context).edit()
-        repeat(STEP_COUNT) { index ->
-            editor.remove(stepKey(incidentType, index))
+    fun observeCompletedCount(context: Context, incidentType: String?): Flow<Int> =
+        if (incidentType.isNullOrBlank()) {
+            flowOf(0)
+        } else {
+            AppDatabase.getInstance(context).checklistProgressDao()
+                .observeCompletedCount(incidentType)
         }
+
+    suspend fun reset(context: Context, incidentType: String) {
+        AppDatabase.getInstance(context).checklistProgressDao().reset(incidentType)
+        val editor = preferences(context).edit()
+        repeat(STEP_COUNT) { editor.remove(stepKey(incidentType, it)) }
         editor.apply()
     }
 

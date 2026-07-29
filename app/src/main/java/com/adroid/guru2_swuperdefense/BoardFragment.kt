@@ -87,7 +87,7 @@ class BoardFragment : Fragment() {
             documentId = "__pinned_notice__",
             id = PINNED_NOTICE_ID,
             authorUid = "",
-            authorName = "SWU퍼디펜스",
+            authorName = "SWUPERDEPENSE",
             isAnonymous = false,
             tag = "공지",
             tagColor = 0xFFFF7A00.toInt(),

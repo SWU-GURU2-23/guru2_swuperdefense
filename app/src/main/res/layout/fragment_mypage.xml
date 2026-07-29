@@ -68,7 +68,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="SWU퍼디펜스 회원"
+                        android:text="SWUPERDEPENSE 회원"
                         android:textColor="@color/text_secondary"
                         android:textSize="13sp" />
 

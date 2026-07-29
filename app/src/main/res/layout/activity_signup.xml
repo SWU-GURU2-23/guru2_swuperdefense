@@ -35,7 +35,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="SWU퍼디펜스에서 사용할 계정을 만드세요."
+            android:text="SWUPERDEPENSE에서 사용할 계정을 만드세요."
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 

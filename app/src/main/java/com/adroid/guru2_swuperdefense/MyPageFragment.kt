@@ -64,7 +64,7 @@ class MyPageFragment : Fragment() {
 
         view.findViewById<View>(R.id.rowVersion).setOnClickListener {
             AlertDialog.Builder(requireContext())
-                .setTitle("SWU퍼디펜스")
+                .setTitle(getString(R.string.app_name))
                 .setMessage("현재 버전: ${appVersionName()}")
                 .setPositiveButton("확인", null)
                 .show()

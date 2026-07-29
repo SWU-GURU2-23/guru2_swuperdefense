@@ -275,6 +275,8 @@ class PostDetailFragment : Fragment() {
                     .setTitle(if (isAdminDelete) "관리자 권한으로 삭제" else "게시글 삭제")
                     .setMessage("정말로 이 게시글을 삭제하시겠습니까?")
                     .setPositiveButton("삭제") { _, _ ->
+                        commentListener?.remove()
+                        commentListener = null
                         repository.deletePost(post.documentId)
                             .addOnSuccessListener {
                                 Toast.makeText(
@@ -285,6 +287,9 @@ class PostDetailFragment : Fragment() {
                                 parentFragmentManager.popBackStack()
                             }
                             .addOnFailureListener {
+                                if (isAdded && this@PostDetailFragment.view != null) {
+                                    observeComments(post)
+                                }
                                 Toast.makeText(
                                     requireContext(),
                                     "삭제 권한 또는 네트워크 연결을 확인해주세요.",

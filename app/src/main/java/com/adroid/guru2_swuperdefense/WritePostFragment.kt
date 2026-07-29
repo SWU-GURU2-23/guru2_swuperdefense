@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.adroid.guru2_swuperdefense.data.repository.BoardRepository
 import com.google.android.material.button.MaterialButton
+import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.launch
 
 /**
@@ -125,8 +126,8 @@ class WritePostFragment : Fragment() {
                 ).addOnSuccessListener {
                     Toast.makeText(requireContext(), "게시글을 수정했습니다.", Toast.LENGTH_SHORT).show()
                     parentFragmentManager.popBackStack()
-                }.addOnFailureListener {
-                    showSaveError(btnSubmit, tvError, saveErrorMessage("수정"))
+                }.addOnFailureListener { error ->
+                    showSaveError(btnSubmit, tvError, saveErrorMessage("수정", error))
                 }
             } else {
                 repository.createPost(
@@ -151,15 +152,24 @@ class WritePostFragment : Fragment() {
                         ).show()
                         parentFragmentManager.popBackStack()
                     }
-                }.addOnFailureListener {
-                    showSaveError(btnSubmit, tvError, saveErrorMessage("등록"))
+                }.addOnFailureListener { error ->
+                    showSaveError(btnSubmit, tvError, saveErrorMessage("등록", error))
                 }
             }
         }
     }
 
-    private fun saveErrorMessage(action: String): String =
-        "게시글을 ${action}하지 못했습니다. 네트워크 연결을 확인해주세요."
+    private fun saveErrorMessage(action: String, error: Exception): String {
+        val code = (error as? FirebaseFirestoreException)?.code
+        return when (code) {
+            FirebaseFirestoreException.Code.PERMISSION_DENIED ->
+                "게시글을 ${action}할 권한이 없습니다. 최신 앱인지 확인한 후 다시 로그인해주세요."
+            FirebaseFirestoreException.Code.UNAVAILABLE ->
+                "게시글을 ${action}하지 못했습니다. 네트워크 연결을 확인해주세요."
+            else ->
+                "게시글을 ${action}하지 못했습니다. 잠시 후 다시 시도해주세요."
+        }
+    }
 
     private fun showSaveError(button: MaterialButton, errorView: TextView, message: String) {
         button.isEnabled = true

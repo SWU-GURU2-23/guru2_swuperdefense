@@ -1,14 +1,5 @@
 package com.adroid.guru2_swuperdefense
 
-// ============================================================================
-// 수정 안내: 위험도 라벨 판정 기준을 점수 0~6 → 0~100(⚠즉시긴급 오버라이드 포함)으로,
-// 안내 문구를 "피해 상황 확인 질문&주의사항 리스트.md"의 긴급/주의/확인 필요 3단계
-// 행동요령·주의사항·참고 공식자료로 교체함. "가장 먼저 해야 할 행동"/"주의사항"은
-// 항목별 리스트(List<String>)로 관리해 ResultDetailFragment에서 카드 단위로 보여주고,
-// 화면에 노출하는 점수는 홈 화면 SECURITY SCORE와 동일한 값(100-위험도점수)을 쓰도록
-// 통일함. 세부 지점은 "==== 수정 시작/끝 ====" 주석으로 표시함.
-// ============================================================================
-
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -72,26 +63,17 @@ class ResultFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvRiskLevel).text =
             riskLevel
 
-        // ==== 수정: "예"라고 답할수록 점수가 쌓이는 원래 방식대로 위험도 원점수를 그대로 "점수/100"
-        // 형식으로 표시 (100-위험도점수로 뒤집어서 보여주던 방식을 되돌림). 홈 화면도 같은 값을
-        // 쓰도록 HomeFragment에서 동일하게 diagnosis.riskScore를 그대로 사용함 ====
+        // 위험도 원점수를 그대로 표시한다 (홈 화면 SECURITY SCORE는 100-위험도점수인 안전점수를 표시).
         view.findViewById<TextView>(R.id.tvRiskScore).text =
             "$riskScore/100"
-        // ==== 수정 끝 ====
 
-        // ==== 수정 시작: 참고 공식자료 링크 표시 (자동 링크로 눌러서 바로 열람 가능) ====
         view.findViewById<TextView>(R.id.tvReferences).text =
             references
-        // ==== 수정 끝 ====
 
-        // 이전 질문 화면으로 이동
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
 
-        // ==== 수정: "가장 먼저 해야 할 행동"/"주의사항" 본문이 길어 이 화면에 통째로 넣는 대신
-        // 항목별 카드 리스트로 보여주는 별도 상세 화면(ResultDetailFragment)으로 이동하는
-        // 버튼 2개로 분리 (기존: "맞춤 대응 가이드 보기" 버튼 1개 + 이 화면에 긴 문단을 그대로 표시) ====
         view.findViewById<View>(R.id.btnOpenImmediateAction).setOnClickListener {
             parentFragmentManager
                 .beginTransaction()
@@ -121,9 +103,7 @@ class ResultFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
-        // ==== 수정 끝 ====
 
-        // 모든 이전 화면을 닫고 홈으로 이동
         view.findViewById<View>(R.id.btnReturnHome).setOnClickListener {
             parentFragmentManager.popBackStack(
                 null,
@@ -132,8 +112,6 @@ class ResultFragment : Fragment() {
         }
     }
 
-    // ==== 수정 시작: 긴급도별(긴급/주의/확인 필요) 행동요령을 항목별 리스트로 관리 - MD 문서
-    // "가장 먼저 해야 할 행동"을 단계별로 쪼갬 (기존: 한 문단짜리 긴 문자열) ====
     private fun getImmediateActionSteps(type: String, riskLevel: String): List<String> {
         val stepsByLevel = immediateActionMap[type] ?: defaultImmediateActions()
         return stepsByLevel[riskLevel] ?: stepsByLevel.values.first()
@@ -257,9 +235,7 @@ class ResultFragment : Fragment() {
             "공식 기관 상담을 받아보세요."
         )
     )
-    // ==== 수정 끝 ====
 
-    // ==== 수정 시작: 카테고리별 주의사항을 항목별 리스트로 관리 - MD 문서 "주의사항" 불릿 리스트 반영 ====
     private fun getPrecautionBullets(type: String): List<String> =
         precautionMap[type] ?: defaultPrecautions()
 
@@ -319,16 +295,13 @@ class ResultFragment : Fragment() {
         "증거를 삭제하지 마세요.",
         "공식 기관을 통해 확인하세요."
     )
-    // ==== 수정 끝 ====
 
-    // ==== 수정 시작: 카테고리별 참고 공식자료 - MD 문서 "참고 공식자료" 반영 ====
     private fun getReferences(type: String): String {
         val links = referenceMap[type] ?: defaultReferences()
         return links.joinToString(separator = "\n")
     }
 
-    // "문자·메신저 피싱" 참고자료에서 전기통신금융사기 통합신고대응센터 항목은 MD 문서에서
-    // 제외되어 코드에서도 함께 제거함 (다른 항목과 URL 성격이 달라 팀 판단으로 뺌)
+    // 전기통신금융사기 통합신고대응센터는 다른 항목과 URL 성격이 달라 팀 판단으로 목록에서 제외함
     private val referenceMap: Map<String, List<String>> = mapOf(
         "문자·메신저 피싱" to listOf(
             "KISA 한국인터넷진흥원 https://www.kisa.or.kr/1020601",
@@ -364,7 +337,6 @@ class ResultFragment : Fragment() {
     private fun defaultReferences(): List<String> = listOf(
         "경찰청 사이버안전지킴이 https://cyberbureau.police.go.kr"
     )
-    // ==== 수정 끝 ====
 
     companion object {
         private const val ARG_INCIDENT_TYPE = "incident_type"

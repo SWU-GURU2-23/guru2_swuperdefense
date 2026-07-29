@@ -11,12 +11,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 
-/**
- * 여러 기기에서 공유하는 게시판 데이터의 Firestore 접근 지점.
- *
- * 공개 게시글·댓글 문서에는 Firebase UID를 저장하지 않는다. 작성자 UID는 보안 규칙으로
- * 보호되는 별도 소유권 문서에 저장해 화면상의 익명이 DB 조회에서도 유지되도록 한다.
- */
+/** 게시판 Firestore 접근 지점. 작성자 UID는 공개 문서 대신 별도 소유권 문서에 저장해 익명성을 DB 조회 단계에서도 유지한다. */
 class BoardRepository private constructor() {
     data class UserPostState(
         val hasLiked: Boolean,

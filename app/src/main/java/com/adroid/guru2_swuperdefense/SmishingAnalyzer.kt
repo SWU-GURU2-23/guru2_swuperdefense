@@ -8,12 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-/**
- * 스미싱 문구 판별 로직.
- *
- * 문구의 위험 신호를 규칙으로 채점하고, 문자에 포함된 URL은 공공데이터포털에서 받은
- * KISA 피싱사이트 URL 데이터셋과 대조한다.
- */
+/** 스미싱 문구 판별 로직. 위험 신호를 규칙으로 채점하고, 문구 속 URL은 KISA 피싱사이트 데이터셋과 대조한다. */
 object SmishingAnalyzer {
 
     data class RiskFactor(

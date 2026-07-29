@@ -14,13 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.card.MaterialCardView
 
-/**
- * "상황 확인 결과" 화면의 "가장 먼저 해야 할 행동"/"주의사항" 본문이 길어 한 화면에
- * 넣지 않고 각각 별도 화면으로 분리하기 위한 공용 상세보기 화면.
- *
- * 문단을 한 덩어리 텍스트로 붙여넣으면 가독성이 떨어지므로, 항목별로 카드 1개씩
- * 나눠서 보여준다 ([numbered]가 true면 순서대로 번호를, false면 불릿(•)을 붙임).
- */
+/** 행동요령/주의사항 항목을 카드 단위로 보여주는 공용 상세보기 화면. [numbered]가 true면 번호, false면 불릿을 붙인다. */
 class ResultDetailFragment : Fragment() {
 
     override fun onCreateView(

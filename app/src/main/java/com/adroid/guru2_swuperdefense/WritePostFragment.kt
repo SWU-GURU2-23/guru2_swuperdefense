@@ -16,14 +16,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.firestore.FirebaseFirestoreException
 import kotlinx.coroutines.launch
 
-/**
- * 게시판 글쓰기/수정 화면. 한 화면을 두 모드로 재사용한다.
- * - 새 글 작성: [newInstance]로 진입 → editPostId 없음 → Firestore 새 문서 저장
- * - 기존 글 수정: [newInstanceForEdit]로 진입 → editPostId 있음 → 화면 진입 시 기존 제목/내용/
- *   카테고리를 입력창에 미리 채워두고, 작성자 본인 문서를 수정
- *
- * 진입 경로: [BoardFragment]의 "+" 버튼(새 글) / [PostDetailFragment]의 "수정" 링크(본인 글만)
- */
+/** 게시판 글쓰기/수정 화면. editPostId 유무로 새 글 작성과 기존 글 수정 두 모드를 한 화면에서 재사용한다. */
 class WritePostFragment : Fragment() {
 
     private var editPostId: Int? = null
@@ -80,7 +73,6 @@ class WritePostFragment : Fragment() {
         val cbAnonymousPost = view.findViewById<CheckBox>(R.id.cbAnonymousPost)
         val btnSubmit = view.findViewById<MaterialButton>(R.id.btnSubmitPost)
 
-        // ==== 수정 시작: 수정 모드일 때 기존 글 내용을 입력창에 미리 채워둠 ====
         if (editingPost != null) {
             tvHeader.text = "글 수정"
             btnSubmit.text = "수정하기"
@@ -91,7 +83,6 @@ class WritePostFragment : Fragment() {
             val matchedChip = categoryOf.entries.find { it.value == editingPost.category }?.key
             if (matchedChip != null) updateChipStyles(matchedChip)
         }
-        // ==== 수정 끝 ====
 
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
             parentFragmentManager.popBackStack()

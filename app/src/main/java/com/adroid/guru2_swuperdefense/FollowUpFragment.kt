@@ -19,7 +19,6 @@ import com.google.android.material.card.MaterialCardView
 
 class FollowUpFragment : Fragment() {
 
-    // 서비스 하나
     private data class ServiceItem(
         val icon: String,
         val title: String,
@@ -27,7 +26,6 @@ class FollowUpFragment : Fragment() {
         val url: String
     )
 
-    // 카테고리 하나
     private data class ServiceCategory(
         val title: String,
         @ColorRes val colorRes: Int,
@@ -36,7 +34,6 @@ class FollowUpFragment : Fragment() {
 
     private val categories = listOf(
 
-        // 1. 개인정보 유출
         ServiceCategory(
             title = "개인정보 유출",
             colorRes = R.color.category_privacy,
@@ -57,7 +54,6 @@ class FollowUpFragment : Fragment() {
             )
         ),
 
-        // 2. 명의 도용
         ServiceCategory(
             title = "명의 도용",
             colorRes = R.color.category_identity,
@@ -78,7 +74,6 @@ class FollowUpFragment : Fragment() {
             )
         ),
 
-        // 3. 게시물·개인정보 삭제
         ServiceCategory(
             title = "게시물·개인정보 삭제",
             colorRes = R.color.category_delete,
@@ -92,7 +87,6 @@ class FollowUpFragment : Fragment() {
             )
         ),
 
-        // 4. 사이버범죄 신고
         ServiceCategory(
             title = "사이버범죄 신고",
             colorRes = R.color.category_cyber,
@@ -106,7 +100,6 @@ class FollowUpFragment : Fragment() {
             )
         ),
 
-        // 5. 금융 피해
         ServiceCategory(
             title = "금융 피해",
             colorRes = R.color.category_finance,
@@ -140,16 +133,13 @@ class FollowUpFragment : Fragment() {
     ) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 뒤로가기
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
             parentFragmentManager.popBackStack()
         }
 
-        // 서비스가 들어갈 영역
         val serviceContainer =
             view.findViewById<LinearLayout>(R.id.serviceContainer)
 
-        // 카테고리 생성
         categories.forEach { category ->
             addCategory(
                 container = serviceContainer,
@@ -158,10 +148,6 @@ class FollowUpFragment : Fragment() {
         }
     }
 
-    /**
-     * 개인정보 유출 / 명의 도용 같은
-     * 카테고리 한 묶음을 화면에 추가
-     */
     private fun addCategory(
         container: LinearLayout,
         category: ServiceCategory
@@ -173,7 +159,6 @@ class FollowUpFragment : Fragment() {
                 category.colorRes
             )
 
-        // 카테고리 제목
         val categoryTitle = TextView(requireContext()).apply {
 
             text = "⬟  ${category.title}"
@@ -203,7 +188,6 @@ class FollowUpFragment : Fragment() {
             categoryTitleParams
         )
 
-        // 카테고리 안 서비스들을 묶는 카드
         val categoryCard =
             MaterialCardView(requireContext()).apply {
 
@@ -235,7 +219,6 @@ class FollowUpFragment : Fragment() {
 
         category.services.forEachIndexed { index, service ->
 
-            // 서비스 한 줄
             rowsContainer.addView(
                 createServiceRow(
                     service = service,
@@ -243,7 +226,6 @@ class FollowUpFragment : Fragment() {
                 )
             )
 
-            // 마지막 서비스가 아니면 구분선 추가
             if (index < category.services.lastIndex) {
 
                 val divider =
@@ -285,10 +267,6 @@ class FollowUpFragment : Fragment() {
         )
     }
 
-    /**
-     * 털린 내 정보 찾기 등의
-     * 서비스 한 줄 생성
-     */
     private fun createServiceRow(
         service: ServiceItem,
         categoryColor: Int
@@ -316,7 +294,6 @@ class FollowUpFragment : Fragment() {
                 }
             }
 
-        // 아이콘 배경
         val iconBackground =
             GradientDrawable().apply {
 
@@ -335,7 +312,6 @@ class FollowUpFragment : Fragment() {
                 )
             }
 
-        // 아이콘
         val iconView =
             TextView(requireContext()).apply {
 
@@ -357,7 +333,6 @@ class FollowUpFragment : Fragment() {
             )
         )
 
-        // 제목 + 설명
         val textArea =
             LinearLayout(requireContext()).apply {
 
@@ -374,7 +349,6 @@ class FollowUpFragment : Fragment() {
                 marginStart = dp(14)
             }
 
-        // 제목
         val title =
             TextView(requireContext()).apply {
 
@@ -397,7 +371,6 @@ class FollowUpFragment : Fragment() {
 
         textArea.addView(title)
 
-        // 설명
         val description =
             TextView(requireContext()).apply {
 
@@ -432,7 +405,6 @@ class FollowUpFragment : Fragment() {
             textAreaParams
         )
 
-        // 오른쪽 화살표
         val arrow =
             TextView(requireContext()).apply {
 
@@ -465,9 +437,6 @@ class FollowUpFragment : Fragment() {
         return row
     }
 
-    /**
-     * 공식 웹사이트 열기
-     */
     private fun openWebsite(
         url: String
     ) {
@@ -492,9 +461,6 @@ class FollowUpFragment : Fragment() {
         }
     }
 
-    /**
-     * dp → px
-     */
     private fun dp(
         value: Int
     ): Int {

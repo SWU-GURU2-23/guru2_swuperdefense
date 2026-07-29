@@ -1,12 +1,5 @@
 package com.adroid.guru2_swuperdefense
 
-// ============================================================================
-// 수정 안내: 질문 목록이 카테고리당 3개짜리 예시(yes=2점/no=0점) 더미 데이터였음.
-// "피해 상황 확인 질문&주의사항 리스트.md" 문서에 정리된 실제 배점표(질문별 0~40점,
-// ⚠즉시 긴급/참고용 표시 포함)로 교체하고, "잘 모르겠어요" 응답과 그에 따른 절반 점수
-// 채점 로직을 추가함. 세부 지점은 "==== 수정 시작/끝 ====" 주석으로 표시함.
-// ============================================================================
-
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -18,7 +11,6 @@ import com.google.android.material.button.MaterialButton
 
 class QuestionFragment : Fragment() {
 
-    // ==== 수정 시작: 배점(0~100), ⚠즉시 긴급, 참고용(채점 제외) 필드 추가 ====
     private data class DiagnosisQuestion(
         val text: String,
         val points: Int,
@@ -27,7 +19,6 @@ class QuestionFragment : Fragment() {
     )
 
     private enum class Answer { YES, UNSURE, NO }
-    // ==== 수정 끝 ====
 
     private lateinit var incidentType: String
 
@@ -44,9 +35,7 @@ class QuestionFragment : Fragment() {
     private lateinit var btnUnsure: MaterialButton
     private lateinit var btnNo: MaterialButton
 
-    // ==== 수정 시작: "피해 상황 확인 질문&주의사항 리스트.md" 1~5번 문서의 실제 질문/배점표로 교체.
-    // 질문 문구는 화면 폭에서 자동 줄바꿈에 맡기면 단어 중간(음절 사이)에서 끊기는 경우가 있어,
-    // 자연스러운 어절 단위로 줄바꿈(\n)을 직접 지정함 ====
+    // 질문 문구는 자동 줄바꿈이 단어 중간에서 끊기지 않도록 어절 단위로 \n을 직접 지정한다.
     private val questionMap = mapOf(
         "문자·메신저 피싱" to listOf(
             DiagnosisQuestion("문자·메신저로 받은 링크를\n눌러본 적이 있나요?", points = 10),
@@ -100,7 +89,6 @@ class QuestionFragment : Fragment() {
             DiagnosisQuestion("판매자가 외부 링크로 유도해\n결제를 진행시켰나요?", points = 15)
         )
     )
-    // ==== 수정 끝 ====
 
     private lateinit var questions: List<DiagnosisQuestion>
 
@@ -158,11 +146,9 @@ class QuestionFragment : Fragment() {
             moveToNextQuestion(Answer.YES)
         }
 
-        // ==== 수정 시작: "잘 모르겠어요" 응답 추가 ====
         btnUnsure.setOnClickListener {
             moveToNextQuestion(Answer.UNSURE)
         }
-        // ==== 수정 끝 ====
 
         btnNo.setOnClickListener {
             moveToNextQuestion(Answer.NO)
@@ -176,19 +162,15 @@ class QuestionFragment : Fragment() {
         val question = questions[currentQuestionIndex]
         tvQuestion.text = question.text
 
-        // ==== 수정 시작: 참고용 문항은 점수에 반영되지 않는다는 안내를 함께 표시. 자동 줄바꿈이
-        // 어색한 지점에서 끊기지 않도록 어절 단위로 줄바꿈(\n)을 직접 지정함 ====
         tvDescription.text = if (question.isReferenceOnly) {
             "이 질문은 위험도 점수에는 반영되지 않고,\n대응 방법 안내에만 참고돼요."
         } else {
             "실제로 겪은 상황을 기준으로 선택해주세요.\n확실하지 않다면\n'잘 모르겠어요'를 선택해도 괜찮아요."
         }
-        // ==== 수정 끝 ====
 
         progressBar.progress = currentQuestionIndex + 1
     }
 
-    // ==== 수정 시작: 예(전체 배점)/잘 모르겠어요(절반 배점, 소수점 버림)/아니요(0점) 채점 + ⚠즉시긴급 플래그 추적 ====
     private fun moveToNextQuestion(answer: Answer) {
         val currentQuestion = questions[currentQuestionIndex]
 
@@ -213,7 +195,6 @@ class QuestionFragment : Fragment() {
             showCompletion()
         }
     }
-    // ==== 수정 끝 ====
 
     private fun showCompletion() {
         val finalScore = riskScore.coerceIn(0, 100)

@@ -19,12 +19,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.launch
 
-/**
- * 스미싱 점검 결과 화면. 메시지를 직접 받지 않고 **checkId**만 받아서
- * [SmishingAnalyzer.getCheckById]로 이력을 조회한 뒤 [SmishingAnalyzer.analyze]로 다시 채점해서 그린다.
- * 이렇게 해야 "최근 활동"에서 예전 검사 결과를 다시 열어봐도 같은 화면을 재사용할 수 있다.
- * (이력이 없는 checkId면 뒤로가기 처리)
- */
+/** 스미싱 점검 결과 화면. 메시지가 아닌 checkId만 받아 이력을 조회·재채점해서 그린다 (과거 결과 재열람과 화면을 공유하기 위함). */
 class SmishingResultFragment : Fragment() {
 
     private lateinit var message: String

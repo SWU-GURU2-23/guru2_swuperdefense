@@ -13,11 +13,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.adroid.guru2_swuperdefense.data.repository.AuthRepository
 
-/**
- * 계정 정보 화면: 아이디 표시(비밀번호는 실제 값 없이 "••••••••"로 항상 마스킹),
- * "비밀번호 수정" → [ChangePasswordFragment]로 이동,
- * "회원탈퇴" → 현재 비밀번호 재인증 후 Firebase 계정과 사용자 문서를 삭제.
- */
+/** 계정 정보 화면. 비밀번호는 항상 마스킹 표시하며, 회원탈퇴는 재인증 후 Firebase 계정과 사용자 문서를 삭제한다. */
 class AccountFragment : Fragment() {
     private val authRepository = AuthRepository.instance
 

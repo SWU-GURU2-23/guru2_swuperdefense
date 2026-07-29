@@ -1,11 +1,5 @@
 package com.adroid.guru2_swuperdefense
 
-// ============================================================================
-// 수정 안내: 원래 이 파일은 fragment_placeholder.xml을 재사용해 제목/안내문구만
-// 띄우는 화면이었음. res/layout/fragment_mypage.xml을 새로 만들고, 계정/버전/
-// 로그아웃 메뉴 로직을 아래에 전부 추가함.
-// ============================================================================
-
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,13 +10,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 
-/**
- * 마이페이지 메뉴 화면: 계정 / 스크랩한 게시글 / 버전 / 로그아웃.
- * - 계정 → [AccountFragment]로 이동
- * - 스크랩한 게시글 → [ScrappedPostsFragment]로 이동
- * - 버전 → PackageManager에서 실제 versionName을 읽어 다이얼로그로 표시
- * - 로그아웃 → Firebase 세션 종료 후 [LoginActivity]로 이동, 현재 액티비티 종료
- */
+/** 마이페이지 메뉴 화면: 계정 / 스크랩한 게시글 / 버전 / 로그아웃. */
 class MyPageFragment : Fragment() {
 
     override fun onCreateView(

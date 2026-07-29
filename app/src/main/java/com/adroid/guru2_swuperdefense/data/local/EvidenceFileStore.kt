@@ -6,12 +6,7 @@ import android.provider.OpenableColumns
 import java.io.File
 import java.util.UUID
 
-/**
- * 사용자가 선택한 파일을 앱 전용 내부 저장소로 복사하고 삭제하는 저장소.
- *
- * 외부 원본 URI 권한에 계속 의존하지 않으므로 원본이 이동되거나 권한이 사라져도
- * 앱 내부 복사본을 열 수 있다.
- */
+/** 선택한 파일을 앱 내부 저장소로 복사·삭제한다. 원본 URI 권한에 의존하지 않아 원본이 사라져도 복사본은 열 수 있다. */
 object EvidenceFileStore {
     data class StoredFile(
         val localFileName: String,

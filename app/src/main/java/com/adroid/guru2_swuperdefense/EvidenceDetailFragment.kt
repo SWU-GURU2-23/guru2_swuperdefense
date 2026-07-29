@@ -21,14 +21,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * 증거 상세보기 화면. Room에서 ID로 증거를 조회해서 타입에 따라 다른 콘텐츠 영역을 보여준다.
- * - "메모" → 전체 텍스트 카드
- * - "이미지" → `contentUri`가 있으면 실제 이미지 미리보기, 없으면(샘플 데이터) 안내 문구
- * - "파일" (음성) → `contentUri`가 있으면 [MediaPlayer]로 실제 재생/일시정지, 없으면 버튼 비활성화
- *
- * 삭제 시 Room 행과 앱 내부 저장소의 파일을 함께 제거한다.
- */
+/** 증거 상세보기 화면. 타입(메모/이미지/음성)에 따라 콘텐츠 영역을 다르게 그리고, 삭제 시 Room 행과 저장소 파일을 함께 제거한다. */
 class EvidenceDetailFragment : Fragment() {
 
     private var evidenceId: Int = -1

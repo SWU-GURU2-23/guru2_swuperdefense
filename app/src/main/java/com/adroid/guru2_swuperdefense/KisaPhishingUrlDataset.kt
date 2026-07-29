@@ -3,12 +3,7 @@ package com.adroid.guru2_swuperdefense
 import android.content.Context
 import java.net.URI
 
-/**
- * 공공데이터포털의 「한국인터넷진흥원_피싱사이트 URL_20231231」 CSV를 읽고 조회한다.
- *
- * 원본 데이터의 날짜/URL 27,582행을 앱에 함께 탑재하므로 API 키나 네트워크 연결 없이
- * 사용자가 입력한 문자 속 URL을 KISA 탐지 이력과 비교할 수 있다.
- */
+/** KISA 피싱사이트 URL CSV(27,582건)를 앱에 내장해 API 키나 네트워크 없이 조회할 수 있게 한다. */
 object KisaPhishingUrlDataset {
     const val SOURCE_NAME = "한국인터넷진흥원_피싱사이트 URL_20231231"
     const val SOURCE_URL = "https://www.data.go.kr/data/15109780/fileData.do"

@@ -1,11 +1,5 @@
 package com.adroid.guru2_swuperdefense
 
-// ============================================================================
-// 수정 안내: 원래 이 파일은 fragment_placeholder.xml을 재사용해 제목/안내문구만
-// 띄우는 화면이었음. res/layout/fragment_evidence.xml을 새로 만들고, 저장용량바/
-// 타입 필터/증거 목록 렌더링 로직을 아래에 전부 추가함.
-// ============================================================================
-
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -29,16 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * 증거 보관함 목록 화면.
- *
- * 책임: 증거 목록 표시, 타입("이미지"/"메모"/"파일")별 필터, 증거 추가 화면 진입.
- * Room의 [EvidenceRepository]를 관찰해 앱을 종료했다가 다시 실행해도 목록을 유지한다.
- *
- * 화면 흐름:
- *   HomeFragment "증거 정리" 카드 또는 이 화면의 "+" 버튼 --> AddEvidenceFragment
- *   이 화면의 증거 클릭 --> EvidenceDetailFragment
- */
+/** 증거 보관함 목록 화면. Room의 [EvidenceRepository]를 관찰해 목록을 유지·필터링한다. */
 class EvidenceFragment : Fragment() {
 
     /** Room Entity를 화면 표시용 리소스와 문자열로 변환한 모델. */
@@ -303,7 +288,6 @@ class EvidenceFragment : Fragment() {
         row.addView(badge)
         card.addView(row)
 
-        // ==== 수정 시작: 증거 상세보기 화면으로 이동 (기존: Toast 스텁) ====
         card.setOnClickListener {
             parentFragmentManager
                 .beginTransaction()
@@ -311,7 +295,6 @@ class EvidenceFragment : Fragment() {
                 .addToBackStack(null)
                 .commit()
         }
-        // ==== 수정 끝 ====
 
         return card
     }

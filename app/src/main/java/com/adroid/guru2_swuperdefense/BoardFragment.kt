@@ -1,11 +1,5 @@
 package com.adroid.guru2_swuperdefense
 
-// ============================================================================
-// 수정 안내: 원래 이 파일은 fragment_board.xml만 그대로 inflate하는 빈 Fragment였음
-// (로직 없음). 게시판 검색/카테고리 필터/글 목록 렌더링 로직을 아래에 전부 추가함.
-// 세부 추가 지점은 "==== 수정 시작/끝 ====" 주석으로 표시되어 있음.
-// ============================================================================
-
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -25,21 +19,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import java.util.concurrent.TimeUnit
 
-/**
- * 게시판 목록 화면.
- *
- * 책임: 게시글 목록 표시, 검색어/카테고리 필터링, 글쓰기 화면 진입.
- * Firestore의 [BoardRepository] 실시간 목록을 화면 모델로 변환해 표시한다.
- *
- * 화면 흐름:
- *   BoardFragment --(+ 버튼)--> WritePostFragment (새 글)
- *   BoardFragment --(글 클릭)--> PostDetailFragment
- */
+/** 게시판 목록 화면. Firestore의 [BoardRepository] 실시간 목록을 화면 모델로 변환해 표시한다. */
 class BoardFragment : Fragment() {
 
-    // ==== 수정 시작: 디자인 캡처(0723_141548365_06) 반영 - 작성자 이니셜/색상, 신규글 배지 필드 추가 ====
-    // ==== 추가 수정: 게시글 상세화면 구현을 위해 meta(String 한 덩어리) → viewCount/commentCount/timeAgo로 분리,
-    //     id(상세화면 조회용), comments(댓글 목록) 필드 추가 ====
     data class Comment(
         val author: String,
         val body: String,
@@ -78,7 +60,6 @@ class BoardFragment : Fragment() {
             return if (timeAgo.isBlank()) base else "$base     · $timeAgo"
         }
     }
-    // ==== 수정 끝 ====
 
     companion object {
         private const val PINNED_NOTICE_ID = Int.MIN_VALUE
@@ -208,9 +189,7 @@ class BoardFragment : Fragment() {
         val chipPhishing = view.findViewById<MaterialButton>(R.id.chipPhishing)
         val chipAccount = view.findViewById<MaterialButton>(R.id.chipAccount)
         val chipMoney = view.findViewById<MaterialButton>(R.id.chipMoney)
-        // ==== 수정 시작: 디자인 캡처 반영 - "보이스피싱" 칩 참조 추가 ====
         val chipVoicePhishing = view.findViewById<MaterialButton>(R.id.chipVoicePhishing)
-        // ==== 수정 끝 ====
         val chipEtc = view.findViewById<MaterialButton>(R.id.chipEtc)
 
         categoryChips = listOf(chipAll, chipPhishing, chipAccount, chipMoney, chipVoicePhishing, chipEtc)
@@ -294,11 +273,7 @@ class BoardFragment : Fragment() {
         }
     }
 
-    /**
-     * 현재 [selectedCategory]/[searchKeyword] 조건으로 [posts]를 필터링해서
-     * postContainer를 다시 그린다. 카테고리 칩 클릭·검색어 입력·화면 최초 진입 시 호출됨.
-     * 공지("공지" 카테고리)는 어떤 필터를 선택해도 항상 노출된다.
-     */
+    /** 공지는 필터와 무관하게 항상 노출하고, 나머지는 카테고리/검색어로 필터링해 다시 그린다. */
     private fun renderList() {
         postContainer.removeAllViews()
 
@@ -319,10 +294,7 @@ class BoardFragment : Fragment() {
         }
     }
 
-    /**
-     * 게시글 하나를 카드 View로 조립한다 (XML 없이 코드로 직접 View를 생성하는 방식).
-     * 클릭하면 조회수를 1 증가시키고 [PostDetailFragment]로 이동한다.
-     */
+    /** 게시글 카드를 코드로 조립한다. 클릭 시 조회수를 1 증가시키고 상세 화면으로 이동한다. */
     private fun buildPostCard(post: Post): MaterialCardView {
         val context = requireContext()
 
@@ -340,7 +312,6 @@ class BoardFragment : Fragment() {
             isFocusable = true
         }
 
-        // ==== 수정 시작: 디자인 캡처 반영 - 좌측 작성자 아바타 원형 + 카테고리 태그 pill 배경 + 신규글 N배지 추가 ====
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
         }
@@ -434,7 +405,6 @@ class BoardFragment : Fragment() {
         row.addView(avatar)
         row.addView(column)
         card.addView(row)
-        // ==== 수정 끝 ====
 
         card.setOnClickListener {
             parentFragmentManager

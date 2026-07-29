@@ -18,15 +18,8 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 
 /**
- * 증거 추가 화면. [Mode]에 따라 입력 UI가 바뀌는 하나의 화면.
- * - [Mode.TEXT] (글로 작성): 제목 + 내용 텍스트를 "메모" 타입 증거 1건으로 저장
- * - [Mode.FILE] (파일 첨부): 이미지/음성 파일을 [ActivityResultContracts.OpenMultipleDocuments]로
- *   여러 개 동시 선택하고 앱 내부 저장소에 복사한 뒤 Room 메타데이터와 연결한다.
- *
- * 저장 완료 시 [MainActivity.navigateToTab]으로 증거보관함 탭으로 이동해서 바로 확인 가능.
- *
- * 원본 URI의 영구 권한에는 의존하지 않는다. 저장 버튼을 누르면 [EvidenceRepository]가
- * 즉시 앱 전용 내부 저장소로 복사한다.
+ * 증거 추가 화면. [Mode]에 따라 텍스트 메모 또는 파일(이미지/음성) 첨부로 입력 UI가 바뀐다.
+ * 원본 URI의 영구 권한에 의존하지 않고, 저장 시 [EvidenceRepository]가 앱 내부 저장소로 즉시 복사한다.
  */
 class AddEvidenceFragment : Fragment() {
 

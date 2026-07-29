@@ -21,13 +21,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.android.material.button.MaterialButton
 import java.util.concurrent.TimeUnit
 
-/**
- * 게시글 상세 화면: 전체 본문 + 공감/스크랩 + 댓글 목록/작성.
- *
- * [BoardFragment.getPostById]로 선택 글을 찾고, 공감·스크랩·읽음·댓글을 Firestore에 저장한다.
- *
- * 본인 글([BoardFragment.Post.isMine] true)일 때만 상단에 "수정"/"삭제" 링크가 보인다.
- */
+/** 게시글 상세 화면: 본문 + 공감/스크랩 + 댓글. 본인 글일 때만 "수정"/"삭제" 링크가 보인다. */
 class PostDetailFragment : Fragment() {
 
     private var postId: Int = -1

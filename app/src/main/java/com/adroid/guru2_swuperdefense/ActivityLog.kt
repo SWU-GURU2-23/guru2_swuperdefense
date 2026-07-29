@@ -19,12 +19,7 @@ import kotlinx.coroutines.flow.map
 
 /**
  * 앱 전역 사용자 활동(스미싱 점검/증거 저장/게시글 작성) 기록.
- * Fragment가 아니라 순수 데이터+유틸 object라서, 어떤 화면에서든 `ActivityLog.log(...)`만
- * 호출하면 기록되고, [HomeFragment]의 "최근 활동"과 [ActivityLogListFragment]의 "전체 보기"가
- * 이 객체 하나를 공용으로 조회한다. 카드 UI([buildCard])와 클릭 시 이동 로직([navigateTo])도
- * 여기 모아둬서 두 화면이 완전히 동일하게 동작한다.
- *
- * 기록은 Room에 저장되어 앱을 종료해도 유지된다.
+ * [HomeFragment]와 [ActivityLogListFragment]가 이 object 하나를 공용으로 조회·렌더링한다.
  */
 object ActivityLog {
 
@@ -41,11 +36,7 @@ object ActivityLog {
         val refId: Int
     )
 
-    /**
-     * 새 활동 1건을 Room에 기록한다.
-     * 호출 지점: 게시글 작성, [AddEvidenceFragment] 저장 완료, [SmishingCheckFragment] 분석 버튼.
-     * @param refId 해당 기능의 상세화면으로 이동할 때 쓸 id (Post.id / Evidence.id / CheckRecord.id)
-     */
+    /** @param refId 해당 기능의 상세화면으로 이동할 때 쓸 id (Post.id / Evidence.id / CheckRecord.id) */
     suspend fun log(
         context: Context,
         icon: String,

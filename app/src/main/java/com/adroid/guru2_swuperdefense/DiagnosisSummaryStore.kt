@@ -2,16 +2,7 @@ package com.adroid.guru2_swuperdefense
 
 import android.content.Context
 
-/**
- * Room 연동 전 홈 화면에 마지막 피해 진단 결과를 표시하기 위한 로컬 저장소.
- *
- * [riskScore]는 "피해 상황 확인 질문&주의사항 리스트.md"의 배점표를 기준으로 계산된
- * 0~100점 위험도 점수이고, [hasCriticalFlag]는 ⚠즉시 긴급 문항에 "네, 해당돼요"로
- * 답했는지 여부다. 최종 긴급도 라벨은 항상 `score >= 70 || hasCriticalFlag` 로 계산한다.
- *
- * TODO: 백엔드 연동 지점 - DB 연동 시 최근 1건만 남기지 않고 사용자별 진단 이력 전체를
- * 서버에 저장하도록 이 object를 리포지토리 호출로 교체.
- */
+/** 진단 결과를 저장하던 레거시 SharedPreferences 저장소. 현재는 Room으로의 1회성 마이그레이션 용도로만 남아있다. */
 object DiagnosisSummaryStore {
     private const val PREF_NAME = "diagnosis_summary"
     private const val KEY_INCIDENT_TYPE = "incident_type"
